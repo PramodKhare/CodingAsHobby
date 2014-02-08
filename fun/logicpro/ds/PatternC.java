@@ -1,4 +1,4 @@
-package com.logicpro.patterns;
+package fun.logicpro.ds;
 
 public class PatternC {
 	
