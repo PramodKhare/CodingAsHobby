@@ -1,0 +1,451 @@
+		     +--------------------------+
+       	       	     |		CS 140		|
+		     | PROJECT 2: USER PROGRAMS	|
+		     | 	   DESIGN DOCUMENT     	|
+		     +--------------------------+
+
+---- GROUP ----
+Pramod Khare <khare.pr@husky.neu.edu>
+Shruthi Keerthi Balki <balki.s@husky.neu.edu>
+Sarang Hattikar <hattikar.s@husky.neu.edu>
+
+---- PRELIMINARIES ----
+
+We had referenced the following sites in solving the project 2
+- http://w3.cs.jmu.edu/kirkpams/450-f14/projects/process_project.shtml
+- http://www.ccs.neu.edu/home/cbw/5600/pintos/pintos_3.html
+- http://www.ccs.neu.edu/home/cbw/5600/pintos/pintos_8.html
+
+			   ARGUMENT PASSING
+			   ================
+
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+- We have not made any changes regarding the declaration of each new or changed
+- `struct' or `struct' member, global or static variable, `typedef', or enumeration. 
+
+---- ALGORITHMS ----
+
+>> A2: Briefly describe how you implemented argument parsing.
+
+- In our implementation of argument passing, after the stack is set up, we parse the 
+- command line argument and retrieve the file name and arguments to be pushed onto the
+- stack. We make a copy of the argument string to avoid race conditions.
+
+- The copy of the argument string is then parsed and the total count of arguments to be 
+- pushed onto stack is obtained.('argc').
+
+- The actual values of arguments including file name is pushed onto the stack using 
+- memcpy() in right to left order. While pushing these values, the addresses of 
+- the arguments pushed are stored in a local array(address[]).
+
+- A word-align character and NULL character to indicate end of args is then pushed
+- onto the stack, then the actual individual addresses from address array is pushed 
+- onto the same stack in the same right to left order. 
+
+Note : In the argument passing, we also ensure that the stack page does not 
+       overflow by checking if the esp pointer is in stack before every push.
+ 
+
+>> How do you arrange for the elements of argv[] to be in the right order?
+
+-  Elements and their corresponding addresses are pushed onto the stack in right to left order.
+
+>> How do you avoid overflowing the stack page?
+
+-  In our implementation we always check if the modified esp-stack pointer after each 
+-  argument push is outside the stack-page boundary,this case indicates a stack overflow, 
+   in which case we exit the thread.
+
+
+---- RATIONALE ----
+
+>> A3: Why does Pintos implement strtok_r() but not strtok()?
+  
+
+- The method 'strtok_r()' saves its state from previous call through a pointer 'char **save_ptr'
+-  whereas the method strtok() uses static buffer for parsing. The use of static buffer may result 
+- in race conditions and it is not thread safe.
+- Calling strtok() from two different threads may result in erroneous results.
+- Hence in pintos, which is a multi-threaded system, it is safer to use strtok_r() but not strtok().
+
+>> A4: In Pintos, the kernel separates commands into a executable name
+>> and arguments.  In Unix-like systems, the shell does this
+>> separation. Identify at least two advantages of the Unix approach.
+
+- In Unix systems, parsing is a shell based operation and it is not done in kernel space.
+
+- One advantage is of Unix over pintos is that since all the parsing operations and detection of bad
+- arguments is done in shell before coming to the kernel, this would reduce the complexity of the 
+- operations on the kernel.
+
+- Second advantage is that in unix systems, since the separation of arguments and executables in shell, 
+- this would enable operations such as pipelining. Unlike in pintos we need to code these operations
+- separately and this might decrease the efficiency and  robustness of the system.
+
+- Hence, the load is reduced on kernel in Unix systems as the separation of commands into a executable 
+- name and arguments is done on shell. 
+
+
+			     SYSTEM CALLS
+			     ============
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+1) Changes in thread.h-
+
+-   Modified the structure of thread (struct thread) by adding the following variables:
+
+struct thread {
+	----
+	
+	int exit_status;                    
+        Purpose : This specifies the exit status of this thread when the thread is exited. 
+                  
+	struct list_elem child_elem;      
+        Purpose : This element represents the child element of the children list.
+
+	struct list children;              
+        Purpose : This list represents all the children spawned by this thread.
+
+ 	struct thread *parent;            
+        Purpose : This thread gives the reference to its parent thread.
+
+ 	struct condition wait_for_me_to_exit; 
+	Purpose : This condition variable is used to put wait on this thread till it exits.
+ 
+ 	struct condition wait_for_me_to_load;
+	Purpose : This condition variable is used for for putting wait on this thread till it loads. 
+ 	
+	struct file *exe_file;              
+	Purpose : This file pointer gives this thread's executable file handle.
+ 
+ 	struct list opened_files;           
+	Purpose: This list represents the list of files which are opened by this thread.
+ 
+ 	int thread_fd;             
+	Purpose : Gives the file descriptor number associated with this thread. Initially it 
+        is 2 and increments on every opened file.
+
+ 	bool is_parent_waiting; 
+	Purpose : This boolean flag is to indicate if parent process is already waiting on this thread.
+ 
+ 	bool is_thread_exited;             
+        Purpose : This bool variable gives if this thread is already dead or exited. 
+
+ 	int is_loaded;        
+	Purpose : Gives the load status of thread. 0 if the thread is yet to load, 1 if it is loaded 
+        and 2 if it is not loaded.
+ 	
+      };
+
+- Added a new structure for a file which is used by system calls.
+
+struct file_structure { 
+
+	int fd;
+	Purpose : Gives the file descriptor of that particular file whi 
+
+	struct file *file; 
+	Purpose : Gives the file pointer reference to the file.
+
+ 	struct list_elem file_elem; 
+	Purpose : The file list element which would be associated with the list of opened files in the 
+                   thread.
+
+		}; 
+
+
+>> B2: Describe how file descriptors are associated with open files.
+>> Are file descriptors unique within the entire OS or just within a
+>> single process?
+
+- In our code, file descriptors are unique just within a single process.
+- Every thread has a file descriptor value attached to it. It is initialized with 2
+- as 0 is reserved for system in (STDIN_FILENO) and 1 for system out (STDOUT_FILENO).
+- These file descriptors are used in file system calls.
+- When a process opens a file, a file structure is created and the file descriptor of process is assigned to 
+- file structure's fd and the opened file to the structure's file and the file list element in the structure is
+- is pushed into the opened files list of the process (thread).
+- The process' file descriptor is then incremented by one so that it can be used by other file when opened.
+- The file descriptors associated with the files can then be used to read, write, close get the file size and
+- perform other file system operations.
+- For example, while closing a file, when given a file descriptor, the process' opened list of files is iterated on
+- and the file structure is obtained with the matching file descriptor. The file pointed in file structure is then
+- closed.
+
+Note : Since our project has file descriptors unique to each process, different processes may have same file 
+       descriptors, but they can be differentiated through the list of opened files in the process.
+
+---- ALGORITHMS ----
+
+>> B3: Describe your code for reading and writing user data from the
+>> kernel.
+
+- In our project, we first validate the virtual address of the buffer obtained from the stack frame
+- as pintos OS uses virtual addresses for obtaining physical memory.
+- That is here we verify if every address is less than PHYS_BASE. 
+- We then validate if the page in buffer is mapped, this can be ensured by getting a page 
+- from page directory relating to that buffer and verifying it is not null.
+- If any of the above validation fails, we exit the thread and return -1;
+
+- In the next step, the size is checked, if size is less than 0 then 0 is returned.
+- The file descriptor is then checked, if it is equal to STDIN_FILENO/STDOUT_FILENO for read/write 
+- operation respectively, then for read we would be returning the output of input_getc() and for write 
+- we would be just dumping the buffer to console by calling putbuf().
+
+- Finally if all the above conditions are not satisfied, then we iterate over the current process' 
+- opened files list and get the file with the matching file descriptor, the functions file_write/
+- file_read are called on the file and number of bytes written/read are returned respectively 
+- for read and write operations. This operation is synchronized by locks to avoid race conditions.
+
+>> B4: Suppose a system call causes a full page (4,096 bytes) of data
+>> to be copied from user space into the kernel space.What is the least
+>> and the greatest possible number of inspections of the page table
+>> (e.g. calls to pagedir_get_page()) that might result?  What about
+>> for a system call that only copies 2 bytes of data?  Is there room
+>> for improvement in these numbers, and how much?
+
+- When a system call causes a full page of data to be copied from user space into the kernel space,
+- the least possible number of inspections of the page table would be 1; this would be the case if the data
+- is present in a single page. 
+- The number of inspections is 2 if the data is present in two different pages. So it depends on number of pages
+- in which data is present.
+- Again in case of 2 bytes of data, the number of inspections would be based on if all the required data is present 
+- in a single page or different pages.
+
+Is there room for improvement in these numbers, and how much?
+- Different approach would be, not performing any validations/inspection on the address before any read/write operation
+- and in case of invalid access there will be page fault. 
+- Default implementation can be modified for handling page faults. 
+- In such cases, for a valid address there would be 0 inspections in read, while for write the system would continue
+- writing until it fetches an invalid address.
+- Read/ Write operations would be faster in this case.
+
+
+>> B5: Briefly describe your implementation of the "wait" system call
+>> and how it interacts with process termination.
+
+- Initially, when a process calls process_wait on a child, our implementation checks if the
+- child is present in the current thread's children list, It then returns -1 if the child is not present 
+- or if wait has already been called on this child.(This is ensured by a flag('is_parent_waiting') in the child thread which tells if 
+- the parent is waiting or not.)
+
+- In the next step, we set the parent waiting flag on this child to be true and put a condition wait('wait_for_me_to_exit') on the child
+- thread, the condition is wait for this child until it exits.This operation is done synchronously.
+- (i.e) The parent process acquires a local lock on the child while it is waiting and releases it once the 
+- signal is received that is when the child exits.
+- After releasing the lock, the child's exit status is returned.
+
+- Some of the scenarios and their results :
+1. Parent waits on child to exit :
+- In this case before exiting the child, releases all of its resources such as file pointer,buffer except its thread structure.
+- The thread structure is released once the parent is dying.
+2. Parent does not wait for child to exit :
+- In this case, the parent checks its children list, releases resources of all its dead children and releases its own resources
+  it finally make all its running children orphan. (i.e.) In our code we make the "*parent" reference pointer to null.
+3. While exiting, the child thread checks if its *parent reference is null. If its is null it release its thread structure and all
+ the resources as it will not be required in the future.
+
+
+>> B6: Any access to user program memory at a user-specified address
+>> can fail due to a bad pointer value.  Such accesses must cause the
+>> process to be terminated.  System calls are fraught with such
+>> accesses, e.g. a "write" system call requires reading the system
+>> call number from the user stack, then each of the call's three
+>> arguments, then an arbitrary amount of user memory, and any of
+>> these can fail at any point.  This poses a design and
+>> error-handling problem: how do you best avoid obscuring the primary
+>> function of code in a morass of error-handling?  Furthermore, when
+>> an error is detected, how do you ensure that all temporarily
+>> allocated resources (locks, buffers, etc.) are freed?  In a few
+>> paragraphs, describe the strategy or strategies you adopted for
+>> managing these issues.  Give an example.
+
+- There are two different ways to handle the obscuring. 
+
+- First is prevention from failure.
+- In this approach we make sure that system call executes in an error free environment.
+- So, the implementation of this approach includes performing all possible error checks before system call starts its
+- execution.For eg. Address validation and checking if file descriptor is in valid range etc.
+- In the case of write system call, just after reading address from stack it is checked for valid user program address.Here
+- before assigning any resource to the thread invalid memory access is trapped.
+
+- Other approach is to handle the failure after it has occurred.
+- Here once when the process tries to access an unmapped address, a page fault exception occurs. In our
+- implementation we call the exit system call which in turn calls the thread exit when the page fault
+- occurs. 
+- In our approach, once a thread exits, we free all of its resources like locks, close files,
+- free file structures. etc.
+
+- For example, in a write system call, at any point if a memory accessing exception occurs, then
+- our approach is to exit the current thread by calling the exit system call, thread then exits
+- which in turn calls process_exit. In process exit after the current thread switches back to previous
+- thread we then release all the resources like file structures, closing files, locks etc. 
+
+---- SYNCHRONIZATION ----
+
+>> B7: The "exec" system call returns -1 if loading the new executable
+>> fails, so it cannot return before the new executable has completed
+>> loading.  How does your code ensure this?  How is the load
+>> success/failure status passed back to the thread that calls "exec"?
+
+- 1. We have added a condition variable "wait_for_me_to_load" for waiting till
+-    executable loading is finished and added a integer field in the thread structure
+-    named "is_loaded", which indicates the status of executable loading process. 
+- 2. In SYS_EXEC system call, we pass command line arguments to process_execute()
+-    method, which returns "tid" of the thread.
+- 3. We then wait on condition variable "wait_for_me_to_load" until loading of 
+-    executable is finished, which is signaled from process_execute()->load() method 
+- 4. The field "is_loaded" can have three values THREAD_YET_TO_BE_LOADED, 
+-    THREAD_LOAD_NEGATIVE (i.e. loading failed) and THREAD_LOAD_POSITIVE.
+- 5. When thread structure is first initialized, in thread_start() method, 
+-    "is_loaded" flag is initialized to THREAD_YET_TO_BE_LOADED.
+- 6. When loading of executable is finished, it is signaled using cond_signal()
+-    for condition variable "wait_for_me_to_load".
+- 7. Thus if "is_loaded" == THREAD_LOAD_NEGATIVE then system call returns -1 
+-    else its returns "tid" of the thread.
+
+>> B8: Consider parent process P with child process C.  How do you
+>> ensure proper synchronization and avoid race conditions when P
+>> calls wait(C) before C exits?  After C exits?  How do you ensure
+>> that all resources are freed in each case?  How about when P
+>> terminates without waiting, before C exits?  After C exits?  Are
+>> there any special cases?
+
+- 1. To implement parent-children relationship we have taken linked-list of 
+- child-process-structures called "children" in thread structure.
+- 2. For proper synchronization between child and parent process we are using 
+-  a) Condition variable "wait_for_me_to_exit" which used to indicate waiting on 
+-     current process and 
+-  b) Boolean flag "is_parent_waiting" to indicate if parent process is already 
+-     waiting on this child process and 
+-  c) "is_thread_exited" - that is is thread is already dead/exited
+- 3. For proper synchronization and avoid race conditions:- There are following scenarios,
+-  a) If Parent P calls wait() on child C before it exits - i.e. Child thread C is yet alive
+-     then 
+-       i) Parent P process first check if the C child is present in its children list. 
+-       ii) If not or if parent is already waiting on Child C then process_wait() returns -1 right away.
+-       iii) else check if Child C thread is already dead, if yes return Child C's exit status.
+-       iv) else parent process P will wait on the child's condition variable "wait_for_me_to_exit"
+-           till child C exits, when the child C exits it will signal the condition variable, so that
+-           parent P exits and returns child C's exit_status value.
+-  b) If Parent P calls wait() on child C after it exits - i.e. Child process C is already dead
+-     then
+-       i) Parent P process first check if the C child is present in its children list. 
+-       ii) If not or if parent is already waiting on Child C then process_wait() returns -1 right away.
+-       iii) else check if Child C is already dead, here its yes so return Child C's exit status.
+-   Note: For waiting and signaling the condition variable we make use of temporary local losks.
+- 4. Releasing resources: We have made sure that all resources used by each thread are released.
+-   As we have a "children" thread list in parent thread, we cannot release child C thread 
+-   structure when C exits, unless parent P is dead. 
+-   Here are few scenarios how we take of releasing the resources:
+-     1) Whenever any process P exits (dies) - 
+-       a) It first closes its executable files and any opened files from "opened_files" file_structures list.
+-       b) Then if its parent is alive, then signals the parent about its exit (if it was waiting).
+-       c) Iterates over its child-processes list, and marks each child as Orphan (i.e. Parent = NULL),
+-       d) Removes each child from its "children" processes list
+-       e) If child process is already dead/exited, then removes i.e. frees its thread structure.
+-       f) Finally checks if its own parent is alive or dead, 
+-          If Dead, meaning current process was Orphan, then releases its thread structure as well.
+-          If Parent is alive, it does not free its thread-structure, which might be required by parent.
+-       g) Marks itself as exited by setting -> is_thread_exited = true;
+-     NOTE: So each process thread structure is freed by its parent, Orphans free-up themselves. 
+- 5. When P terminates without waiting on Child C, we make all its children orphan,
+- and there are no special cases, resources release happens as mentioned above.
+
+---- RATIONALE ----
+
+>> B9: Why did you choose to implement access to user memory from the
+>> kernel in the way that you did?
+
+-  1) To check if given address is in user virtual memory space, we have written 
+-  a function "is_ptr_in_user_vm_space()". This function check if virtual address 
+-  less than PHYS_BASE, greater than 0x08084000 (128MB). 
+-  NOTE: reference -> http://w3.cs.jmu.edu/kirkpams/450-f14/projects/process_project.shtml
+-  2) WE also check if the virtual address is mapped to user-space using "pagedir_get_page()" method.
+-  3) In case of bulk memory e.g. Read/Write sys_calls with buffers, we check if each buffer pointer 
+-  is within user-space.
+
+-  Advantages of this approach:
+-   1. Ease in implementation.
+-   2. Other approach for user memory access implementation could be page_fault.
+-     This will certainly make system faster as validations would not be performed for
+-     every address. But this may result in wastage of system resources as address
+-     would be validated much after allocation of resources.
+-   3. Thus our approach prevents wastage of system resources.
+
+>> B10: What advantages or disadvantages can you see to your design
+>> for file descriptors?
+
+- 1. In our Thread structure we have added "opened_files" linked-list which is a 
+-  list of all opened files by this process (in the form of file_structure)
+- 2. file_structure struct contains 
+-     a) int fd - file_descriptor int value which always starts from 2 
+-          (as 0 and 1 are reserved for STDIN and STDOUT)
+-     b) file* file - file handle reference 
+-     c) struct list_elem file_elem - a list element which is added to "opened_files" list.
+
+- Approaches considered: 
+-   i) Array implementation
+-   ii) Linked list implementation - we chose this.
+    
+-  Advantages of Linked-list implementation:
+-   a) Efficient use of memory - needs only that much required by current number of nodes
+-   b) Easy addition and removal of elements
+-   c) Can easily restrict maximum number of opened_files using some check, 
+-      rather than using fixed size array.
+
+- Advantages of Array-approach: 
+-  a) Index-based quick access of elements
+
+- Disadvantages of linked-list approach:
+-  a) Individual element access time - O(n), which would result in increase total sys_call time.
+-   But as the size of list is not too big so it would not affect that badly.
+
+- Restricting maximum number of open files: 
+- In array implementation this would be limited to array size while in list 
+- implementation there is no limit on maximum number of open files. 
+- In most standard OS implementation there is always a limit on the maximum number of 
+- opened files. Such a limit can be easily placed in our design with one more 
+- check or extra variable.
+
+>> B11: The default tid_t to pid_t mapping is the identity mapping.
+>> If you changed it, what advantages are there to your approach?
+
+- As pintos does not support a single process running multiple threads and Our 
+- implementation also doesn't change it, changing default identity mapping 
+- of tid_t and pid_t would not work.
+- Hence we decided not to change default mapping.  
+
+			   SURVEY QUESTIONS
+			   ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the course evaluations at the end of
+the quarter.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?

@@ -1,0 +1,91 @@
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Title 	: How to debug GDB in pintos
+By 	: Pramod Khare
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Important Links:
+http://w3.cs.jmu.edu/kirkpams/450-f14/projects/debugging.shtml#SEC151
+
+Cant' get gdb to work for pintos debugging
+https://groups.google.com/forum/#!topic/12au-cs140/8zbrB2Vx9w0
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Important Commands:
+
+pintos -v --gdb -- -q -mlfqs run mlfqs-load-1
+pintos -v --gdb --dport=8888 -- -q -mlfqs run mlfqs-load-1
+pintos -v --gdb --dport=8888 -- -q run args-none
+
+pintos -v -k -T 60 --qemu  --filesys-size=2 -p build/tests/userprog/args-none -a args-none -- -q  -f run args-none
+pintos -v --gdb --dport=8888 --filesys-size=2 -p build/tests/userprog/args-none -a args-none -- -q -f run args-none
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+pintos -v --gdb --dport=8888 --filesys-size=2 -p build/tests/userprog/args-single -a args-single -- -q  -f run 'args-single onearg'
+
+pintos -v --gdb --dport=8888 --filesys-size=2 -p buildtests/userprog/sc-bad-arg -a sc-bad-arg -- -q  -f run sc-bad-arg
+
+pintos -v -k -T 60 --qemu  --filesys-size=2 -p build/tests/userprog/write-normal -a write-normal -p ../tests/userprog/sample.txt -a sample.txt -- -q  -f run write-normal
+
+pintos -v --gdb --dport=8888 --filesys-size=2 -p build/tests/userprog/write-normal -a write-normal -p ../tests/userprog/sample.txt -a sample.txt -- -q  -f run write-normal
+
+pintos -v -k -T 60 --qemu  --filesys-size=2 -p build/tests/userprog/close-normal -a close-normal -p ../tests/userprog/sample.txt -a sample.txt -- -q  -f run close-normal
+
+pintos -v --gdb --dport=9090 --filesys-size=2 -p build/tests/userprog/close-normal -a close-normal -p ../tests/userprog/sample.txt -a sample.txt -- -q  -f run close-normal
+
+pintos -v -k -T 60 --qemu --filesys-size=2 -p build/tests/userprog/read-normal -a read-normal -p ../tests/userprog/sample.txt -a sample.txt -- -q  -f run read-normal 
+pintos -v --gdb --dport=9090 --filesys-size=2 -p build/tests/userprog/read-normal -a read-normal -p ../tests/userprog/sample.txt -a sample.txt -- -q  -f run read-normal 
+
+pintos -v -k -T 60 --qemu  --filesys-size=2 -p build/tests/userprog/exec-arg -a exec-arg -p build/tests/userprog/child-args -a child-args -- -q  -f run exec-arg
+pintos -v --gdb --dport=9090 --filesys-size=2 -p build/tests/userprog/exec-arg -a exec-arg -p build/tests/userprog/child-args -a child-args -- -q  -f run exec-arg
+
+pintos -v -k -T 60 --qemu  --filesys-size=2 -p build/tests/userprog/exec-arg -a exec-arg -p build/tests/userprog/child-args -a child-args -- -q  -f run exec-arg < /dev/null 2> build/tests/userprog/exec-arg.errors > build/tests/userprog/exec-arg.output
+perl -I../.. ../tests/userprog/exec-arg.ck build/tests/userprog/exec-arg build/tests/userprog/exec-arg.result
+
+pintos -v -k -T 60 --qemu  --filesys-size=2 -p build/tests/userprog/exec-once -a exec-once -p build/tests/userprog/child-simple -a child-simple -- -q  -f run exec-once
+pintos -v --gdb --dport=9191 --filesys-size=2 -p build/tests/userprog/exec-once -a exec-once -p build/tests/userprog/child-simple -a child-simple -- -q  -f run exec-once
+pintos -v -k -T 60 --qemu  --filesys-size=2 -p build/tests/userprog/exec-missing -a exec-missing -- -q  -f run exec-missing
+pintos -v --gdb --dport=9090 --filesys-size=2 -p build/tests/userprog/exec-missing -a exec-missing -- -q  -f run exec-missing
+
+pintos -v -k -T 60 --qemu  --filesys-size=2 -p tests/userprog/wait-simple -a wait-simple -p tests/userprog/child-simple -a child-simple -- -q  -f run wait-simple 
+pintos -v --gdb --dport=9292 --filesys-size=2 -p build/tests/userprog/wait-simple -a wait-simple -p build/tests/userprog/child-simple -a child-simple -- -q  -f run wait-simple 
+
+pintos -v -k -T 60 --qemu  --filesys-size=2 -p build/tests/userprog/rox-child -a rox-child -p build/tests/userprog/child-rox -a child-rox -- -q  -f run rox-child 
+pintos -v --gdb --dport=9292 --filesys-size=2 -p build/tests/userprog/rox-child -a rox-child -p build/tests/userprog/child-rox -a child-rox -- -q  -f run rox-child 
+
+pintos -v -k -T 360 --qemu  --filesys-size=2 -p build/tests/userprog/no-vm/multi-oom -a multi-oom -- -q  -f run multi-oom 
+pintos -v --gdb --dport=9292 --filesys-size=2 -p build/tests/userprog/no-vm/multi-oom -a multi-oom -- -q  -f run multi-oom 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+To connect using this gdb debugger using other terminal - 
+pintos-gdb build/kernel.o
+
+Then if you have started the pintos in gdb mode on particular debug 
+port then use --> 
+	target remote localhost:8888	
+	target remote localhost:9090
+	OR
+	debugpintos
+
+And then place debug points and start contiue
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+(gdb) b process.c:263 
+Breakpoint 1 at 0xc002a872: file ../../userprog/process.c, line 263.
+(gdb) b process.c:52                                                
+Breakpoint 2 at 0xc002a7f0: file ../../userprog/process.c, line 52. 
+(gdb) b process.c:350                                               
+Breakpoint 3 at 0xc002ad57: file ../../userprog/process.c, line 350.
+(gdb) b process.c:550
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Debugs commands : 
+breakpoint process.c:76
+b process.c:76
+
+c  (for continue)
+l  (to print the )
+bt (show backtrace of function calls)
+loadusersymbols tests/userprog/exec-multiple (to debug the user programs)
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+pintos -v -k -T 300 --qemu  --filesys-size=2 -p build/tests/filesys/base/syn-read -a syn-read -p build/tests/filesys/base/child-syn-read -a child-syn-read -- -q  -f run syn-read 
+pintos -v --gdb --dport=9292 --filesys-size=2 -p build/tests/filesys/base/syn-read -a syn-read -p build/tests/filesys/base/child-syn-read -a child-syn-read -- -q  -f run syn-read 
