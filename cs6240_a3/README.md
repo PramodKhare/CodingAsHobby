@@ -1,7 +1,9 @@
 README
 
 Course: Parallel Data Processing in Map Reduce (CS6240)
+
 Assignment A3: Analyzing Airline Data
+
 Authors: Pramod Khare, Ryan Millay, Nikit Waghela, Ankita Muley
 
 Requirement: Before running any scripts please verify if you have following runtime env's/libs installed.
