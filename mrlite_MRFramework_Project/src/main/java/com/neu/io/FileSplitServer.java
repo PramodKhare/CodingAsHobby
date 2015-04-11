@@ -1,10 +1,7 @@
 package com.neu.io;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.HashMap;
-import java.util.NoSuchElementException;
 
 public class FileSplitServer implements Runnable{
 	public static volatile int splitIndex = 0;

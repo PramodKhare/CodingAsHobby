@@ -2,10 +2,8 @@ package com.neu.mrlite;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.util.List;
 import java.util.ArrayList;
-
-import com.neu.io.FileSplitServer;
+import java.util.List;
 
 public class JobServer implements Runnable {
 	private static final int SIGTERM = 30;

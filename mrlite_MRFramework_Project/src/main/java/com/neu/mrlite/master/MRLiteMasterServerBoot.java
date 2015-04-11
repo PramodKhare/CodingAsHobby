@@ -1,20 +1,12 @@
 package com.neu.mrlite.master;
 
-
+/**
+ * Bootstrapping the Whole System of JobServer
+ * 
+ * @author Nikit Waghela
+ */
 public class MRLiteMasterServerBoot {
-	public static void startMaster() {
-		JobServer.startJobServer();
-	}
-	
-	public static void usageAndExit() {
-		System.out.println("usage: java jar <mrlite-*-SNAPSHOT.jar>");
-		System.exit(1);
-	}
-	
-	public static void main(String args[]) {
-        /*
-         * if(args.length == 0) { usageAndExit(); }
-         */
-        startMaster();
-	}
+    public static void main(String args[]) throws Exception {
+        JobServer.startJobServer();
+    }
 }

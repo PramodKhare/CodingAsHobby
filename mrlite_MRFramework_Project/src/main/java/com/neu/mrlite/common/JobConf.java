@@ -2,6 +2,8 @@ package com.neu.mrlite.common;
 
 import java.util.List;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.neu.mrlite.common.exception.InvalidJobConfException;
 
 /**
@@ -11,7 +13,7 @@ import com.neu.mrlite.common.exception.InvalidJobConfException;
  * @author Pramod Khare
  */
 public class JobConf {
-
+    private String jobId;
     private String executableJar;
     private List<String> libJars;
     private String mapperClass;
@@ -20,6 +22,12 @@ public class JobConf {
     private int numberOfReduceTasks;
     private String inputFilePath;
     private String outDirPath;
+    private boolean isCompleted = false;
+    private long jobStartTime;
+    private long jobEndTime;
+    private long jobQueuedTime;
+    private long timeToCompleteMapPhase;
+    private long timeToCompleteReducePhase;
 
     public JobConf() {
     }
@@ -49,17 +57,20 @@ public class JobConf {
      * @throws InvalidJobConfException
      *             otherwise
      */
-    public boolean isValidJobConfiguration() throws InvalidJobConfException {
+    public synchronized boolean isValidJobConfiguration()
+            throws InvalidJobConfException {
         boolean isValid = true;
-        isValid = isEmpty(this.executableJar);
-        isValid = isEmpty(this.mapperClass);
-        isValid = isEmpty(this.inputFilePath);
-        isValid = isEmpty(this.outDirPath);
+        isValid = isValid && !isEmpty(this.executableJar);
+        isValid = isValid && !isEmpty(this.mapperClass);
+        isValid = isValid && !isEmpty(this.inputFilePath);
+        isValid = isValid && !isEmpty(this.outDirPath);
         if (!isValid) {
             throw new InvalidJobConfException(
-                    "Please provide executable-jar, main-class, input-file-path and output directory-path atleast.");
+                    "Please provide executable-jar, mapper-class, reducer-class, input-file-path and output directory-path atleast.");
         }
-        return true;
+        // Generate a unique timestamp for jobId
+        this.setJobId("Job_" + System.currentTimeMillis());
+        return isValid;
     }
 
     // Checks if input string is empty
@@ -133,5 +144,77 @@ public class JobConf {
 
     public void setReducerClass(String reducerClass) {
         this.reducerClass = reducerClass;
+    }
+
+    public boolean isCompleted() {
+        return isCompleted;
+    }
+
+    public void setCompleted(boolean isCompleted) {
+        this.isCompleted = isCompleted;
+    }
+
+    public String serialize() {
+        final Gson gson = new Gson();
+        return gson.toJson(this);
+    }
+
+    public String getJobId() {
+        return jobId;
+    }
+
+    public void setJobId(String jobId) {
+        this.jobId = jobId;
+    }
+
+    public long getJobStartTime() {
+        return jobStartTime;
+    }
+
+    public void setJobStartTime(long jobStartTime) {
+        this.jobStartTime = jobStartTime;
+    }
+
+    public long getJobEndTime() {
+        return jobEndTime;
+    }
+
+    public void setJobEndTime(long jobEndTime) {
+        this.jobEndTime = jobEndTime;
+    }
+
+    public long getJobQueuedTime() {
+        return jobQueuedTime;
+    }
+
+    public void setJobQueuedTime(long jobQueuedTime) {
+        this.jobQueuedTime = jobQueuedTime;
+    }
+
+    public long getTimeToCompleteMapPhase() {
+        return timeToCompleteMapPhase;
+    }
+
+    public void setTimeToCompleteMapPhase(long timeToCompleteMapPhase) {
+        this.timeToCompleteMapPhase = timeToCompleteMapPhase;
+    }
+
+    public long getTimeToCompleteReducePhase() {
+        return timeToCompleteReducePhase;
+    }
+
+    public void setTimeToCompleteReducePhase(long timeToCompleteReducePhase) {
+        this.timeToCompleteReducePhase = timeToCompleteReducePhase;
+    }
+
+    public String serializeToJson() {
+        final Gson gson = new Gson();
+        return gson.toJson(this);
+    }
+
+    public static JobConf deserializeFromJson(final String jsonStr)
+            throws JsonSyntaxException {
+        final Gson gson = new Gson();
+        return gson.fromJson(jsonStr, JobConf.class);
     }
 }
