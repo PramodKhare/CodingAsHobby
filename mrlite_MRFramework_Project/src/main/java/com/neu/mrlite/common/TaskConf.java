@@ -1,47 +1,46 @@
 package com.neu.mrlite.common;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class TaskConf {
-    private long jobNumber;
-    private String taskName;
-    private String ioHandleServerUrl;
-    private boolean isMapperTask = true;
-    private List<ClientNode> mapperNodes;
-    private int reducePartitionNumber = 0;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import com.neu.mrlite.master.JobServer;
 
+public class TaskConf implements Serializable {
+    private static final long serialVersionUID = 4610481245402892811L;
+    private static int taskCounter = 0;
+
+    /* Common Task Properties */
+    private String taskId;
+    private boolean isMapperTask = true;
     private String executableJar;
     private List<String> libJars;
+    private String inputFilePath;
+
+    /* Mapper Task Properties */
+    private String paritionerClass;
+    private int numberOfReduceTasks = 1;
     private String mapperClass;
+    private String ioHandleServerUrl;
+
+    /* Reducer Task Properties */
     private String reducerClass;
     private String outDirPath;
-    private String paritionerClass;
+    private List<MapperNodeInfo> mapperNodeInfo;
 
-    public TaskConf() {
+    // Partition number to stream from map-node for reducer task
+    private int partitionToStreamForReducer = 0;
+
+    private TaskConf() {
     }
 
-    public long getJobNumber() {
-        return jobNumber;
+    public String getTaskId() {
+        return taskId;
     }
 
-    public void setJobNumber(long jobNumber) {
-        this.jobNumber = jobNumber;
-    }
-
-    public String getTaskName() {
-        return taskName;
-    }
-
-    public void setTaskName(String taskName) {
-        this.taskName = taskName;
-    }
-
-    public String getIoHandleServerUrl() {
-        return ioHandleServerUrl;
-    }
-
-    public void setIoHandleServerUrl(String ioHandleServerUrl) {
-        this.ioHandleServerUrl = ioHandleServerUrl;
+    public void setTaskId(String taskId) {
+        this.taskId = taskId;
     }
 
     public boolean isMapperTask() {
@@ -50,22 +49,6 @@ public class TaskConf {
 
     public void setMapperTask(boolean isMapperTask) {
         this.isMapperTask = isMapperTask;
-    }
-
-    public List<ClientNode> getMapperNodes() {
-        return mapperNodes;
-    }
-
-    public void setMapperNodes(List<ClientNode> mapperNodes) {
-        this.mapperNodes = mapperNodes;
-    }
-
-    public int getReducePartitionNumber() {
-        return reducePartitionNumber;
-    }
-
-    public void setReducePartitionNumber(int reducePartitionNumber) {
-        this.reducePartitionNumber = reducePartitionNumber;
     }
 
     public String getExecutableJar() {
@@ -84,12 +67,28 @@ public class TaskConf {
         this.libJars = libJars;
     }
 
+    public String getInputFilePath() {
+        return inputFilePath;
+    }
+
+    public void setInputFilePath(String inputFilePath) {
+        this.inputFilePath = inputFilePath;
+    }
+
     public String getMapperClass() {
         return mapperClass;
     }
 
     public void setMapperClass(String mapperClass) {
         this.mapperClass = mapperClass;
+    }
+
+    public String getIoHandleServerUrl() {
+        return ioHandleServerUrl;
+    }
+
+    public void setIoHandleServerUrl(String ioHandleServerUrl) {
+        this.ioHandleServerUrl = ioHandleServerUrl;
     }
 
     public String getReducerClass() {
@@ -108,11 +107,90 @@ public class TaskConf {
         this.outDirPath = outDirPath;
     }
 
+    public List<MapperNodeInfo> getMapperNodeInfo() {
+        return mapperNodeInfo;
+    }
+
+    public void setMapperNodeInfo(List<MapperNodeInfo> mapperNodeInfo) {
+        this.mapperNodeInfo = mapperNodeInfo;
+    }
+
+    public int getPartitionToStreamForReducer() {
+        return partitionToStreamForReducer;
+    }
+
+    public void setPartitionToStreamForReducer(int partitionToStreamForReducer) {
+        this.partitionToStreamForReducer = partitionToStreamForReducer;
+    }
+
+    public static long getSerialversionuid() {
+        return serialVersionUID;
+    }
+
     public String getParitionerClass() {
         return paritionerClass;
     }
 
-    public void setParitionerClass(String paritionerClass) {
+    public void setParitionerClass(final String paritionerClass) {
         this.paritionerClass = paritionerClass;
+    }
+
+    public int getNumberOfReduceTasks() {
+        return numberOfReduceTasks;
+    }
+
+    public void setNumberOfReduceTasks(int numberOfReduceTasks) {
+        this.numberOfReduceTasks = numberOfReduceTasks;
+    }
+
+    public String serializeToJson() {
+        final Gson gson = new Gson();
+        return gson.toJson(this);
+    }
+
+    public static TaskConf deserializeFromJson(final String jsonStr)
+            throws JsonSyntaxException {
+        final Gson gson = new Gson();
+        return gson.fromJson(jsonStr, TaskConf.class);
+    }
+
+    public static synchronized TaskConf createMapperTaskConf(
+            final ClientNode node, final JobConf jobConf) {
+        TaskConf taskConf = new TaskConf();
+
+        /* Common Task Properties */
+        taskConf.setExecutableJar(jobConf.getExecutableJar());
+        taskConf.setInputFilePath(jobConf.getInputFilePath());
+        taskConf.setLibJars(jobConf.getLibJars());
+        taskConf.setTaskId(jobConf.getJobId() + "_task_map" + taskCounter++);
+
+        /* Mapper Properties */
+        taskConf.setMapperTask(true);
+        taskConf.setMapperClass(jobConf.getMapperClass());
+        taskConf.setIoHandleServerUrl(node.getClientSocket().getLocalAddress()
+                .toString());
+        taskConf.setNumberOfReduceTasks(jobConf.getNumberOfReduceTasks() < 1 ? 1
+                : jobConf.getNumberOfReduceTasks());
+        return taskConf;
+    }
+
+    public static synchronized TaskConf createReducerTaskConf(
+            final List<JobServer> nodes, final JobConf jobConf) {
+        TaskConf taskConf = new TaskConf();
+        /* Common Task Properties */
+        taskConf.setExecutableJar(jobConf.getExecutableJar());
+        taskConf.setInputFilePath(jobConf.getInputFilePath());
+        taskConf.setLibJars(jobConf.getLibJars());
+        taskConf.setTaskId(jobConf.getJobId() + "_task_reduce" + taskCounter++);
+
+        /* Reducer Properties */
+        taskConf.setMapperTask(false);
+        taskConf.setReducerClass(jobConf.getReducerClass());
+        // taskConf.setIoHandleServerUrl(node.getClientSocket().getLocalAddress().toString());
+        taskConf.setOutDirPath(jobConf.getOutDirPath());
+
+        /* Create MapperNodeInfo for each mapper jobservlet */ 
+
+        return taskConf;
     }
 }

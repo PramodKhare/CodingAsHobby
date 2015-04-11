@@ -2,52 +2,47 @@ package com.neu.mrlite.master;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.Socket;
 
-import com.neu.mrlite.common.JobConf;
+import com.neu.mrlite.common.ClientNode;
+import com.neu.mrlite.common.TaskConf;
 
-public class JobServlet implements Runnable {
-    private static final String TERMINATE = "30";
-    private static final int SIGTERM = 30;
-    private Socket socket = null;
-    private int intr = 0;
-    private PrintWriter out;
-    private BufferedReader in;
+public class JobServlet extends Thread {
+    private static final String TERMINATE = "Task_Finished";
+    private final PrintWriter out;
+    private final BufferedReader in;
+    private final TaskConf taskConf;
 
-    public JobServlet(Socket socket) {
-        this.socket = socket;
+    public JobServlet(ClientNode slaveNode, TaskConf taskConf)
+            throws IOException {
+        this.in = slaveNode.getInputFromClient();
+        this.out = slaveNode.getOutputToClient();
+        this.taskConf = taskConf;
+        start();
     }
 
     @Override
     public void run() {
         try {
-            out = new PrintWriter(socket.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(
-                    socket.getInputStream()));
+            // send the Task Configuration to client
+            out.println(taskConf.serializeToJson());
             String inputLine;
-            System.out.println("Started connection from:" + socket.getPort());
+            System.out.println("Waiting for client response...");
             while ((inputLine = in.readLine()) != null) {
+                System.out.println(inputLine);
                 if (inputLine.equals(TERMINATE)) {
-                    this.intr = SIGTERM;
                     break;
                 }
-                System.out.println(inputLine);
             }
-            System.out.println("Closed connection from:" + socket.getPort());
-            socket.close();
+            System.out.println(taskConf.isMapperTask() ? "Mapper " : "Reducer "
+                    + "Task is complete");
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
 
-    public void publish(final JobConf jobConf) {
-        out.println(jobConf.serialize());
-    }
-
-    public boolean isInterrupted() {
-        return intr == 30;
+    public TaskConf getTaskConf() {
+        return taskConf;
     }
 }

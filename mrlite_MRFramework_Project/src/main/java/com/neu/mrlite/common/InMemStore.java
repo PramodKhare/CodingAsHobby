@@ -1,10 +1,10 @@
 package com.neu.mrlite.common;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class InMemStore {
-    private static final Map<String, Object> store = new HashMap<String, Object>();
+    private static final Map<String, Object> store = new ConcurrentHashMap<String, Object>();
 
     private InMemStore() {
     }

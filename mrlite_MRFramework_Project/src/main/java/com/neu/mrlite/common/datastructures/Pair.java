@@ -2,21 +2,18 @@ package com.neu.mrlite.common.datastructures;
 
 import java.io.Serializable;
 
-public class Pair<T1, T2> implements Serializable {
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+
+public class Pair<K extends Writable, V extends Writable> implements
+        Serializable, Comparable<Pair<K, V>> {
     private static final long serialVersionUID = -6164524333667124662L;
-    public T1 key;
-    public T2 value;
+    private K key;
+    private V value;
 
-    public Pair() {
-    }
-
-    public Pair(T1 key, T2 value) {
+    public Pair(final K key, final V value) {
         this.key = key;
         this.value = value;
-    }
-
-    public String toString() {
-        return "{" + key + ": " + value + "}";
     }
 
     @SuppressWarnings("rawtypes")
@@ -30,5 +27,46 @@ public class Pair<T1, T2> implements Serializable {
             return true;
         }
         return false;
+    }
+
+    public K getKey() {
+        return key;
+    }
+
+    public void setKey(K key) {
+        this.key = key;
+    }
+
+    public V getValue() {
+        return value;
+    }
+
+    public void setValue(V value) {
+        this.value = value;
+    }
+
+    @Override
+    public String toString() {
+        return this.serializeToJson();
+    }
+
+    public String serializeToJson() {
+        final Gson gson = new Gson();
+        return gson.toJson(this);
+    }
+
+    public static Pair deserializeFromJson(final String jsonStr)
+            throws JsonSyntaxException {
+        final Gson gson = new Gson();
+        return gson.fromJson(jsonStr, Pair.class);
+    }
+
+    @Override
+    public int compareTo(Pair<K, V> anotherPair) {
+        if (this.equals(anotherPair)) {
+            return 0;
+        } else {
+            return (this.getKey().compareTo(anotherPair.getKey()));
+        }
     }
 }

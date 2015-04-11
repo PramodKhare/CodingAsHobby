@@ -1,35 +1,23 @@
 package com.neu.mrlite.clients;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.lang.reflect.Method;
 import java.net.Socket;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.ArrayList;
 import java.util.List;
 
-import com.google.gson.Gson;
-import com.neu.mrlite.common.JobConf;
-import com.neu.mrlite.common.datastructures.Assortment;
-import com.neu.mrlite.common.datastructures.IOCallback;
-import com.neu.mrlite.common.datastructures.IOHandle;
-import com.neu.mrlite.common.datastructures.POCallback;
-import com.neu.mrlite.common.datastructures.Pair;
+import com.neu.mrlite.common.TaskConf;
 import com.neu.mrlite.common.datastructures.Writable;
 
-public class JobClient implements Runnable {
-
+public class JobClient extends Thread {
     static List<Writable> outVal = null;
-
     private PrintWriter out;
     private BufferedReader in;
     private String masterIp;
 
     public JobClient(String masterIp) {
         this.masterIp = masterIp;
+        start();
     }
 
     @Override
@@ -42,25 +30,18 @@ public class JobClient implements Runnable {
             String line;
             while ((line = in.readLine()) != null) {
                 try {
-                    // this is serialized JobConf object, deserialize it
-                    JobConf task = JobConf.deserializeFromJson(line);
-                    File file = new File(task.getExecutableJar());
-                    URL url = file.toURI().toURL();
-                    URL[] urls = new URL[] { url };
-                    ClassLoader cl = new URLClassLoader(urls);
-                    Class<?> cls = cl.loadClass(task.getMapperClass());
-                    Method[] m = cls.getDeclaredMethods();
+                    // this is serialized TaskConf object, deserialize it
+                    TaskConf task = TaskConf.deserializeFromJson(line);
 
-                    for (Method method : m) {
-                        if (method.getName().equals("run")) {
-                            Object o = method.invoke(null,
-                                    task.getInputFilePath(),
-                                    task.getOutDirPath());
-                            execute(Assortment.getExecChain(),
-                                    Assortment.getIOHandle());
-                            break;
-                        }
+                    // Decide if its a Mapper task or reducer task
+                    if (task.isMapperTask()) {
+                        // Start Map Task thread
+                        new MapperClientTask(task, out).join();
+                    } else {
+                        // Start Reduce Task Thread
+                        new ReducerClientTask(task, out).join();
                     }
+
                 } catch (final Exception e) {
                     e.printStackTrace();
                     out.println("Invalid Task configuration provided");
@@ -69,37 +50,5 @@ public class JobClient implements Runnable {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public void execute(List<POCallback> exec, IOHandle io) {
-        Object outKey;
-        Gson gson = new Gson();
-        for (POCallback p : exec) {
-            System.out.println(p);
-            if (p instanceof IOCallback) {
-                ((IOCallback) p).process(io);
-                outVal = (List<Writable>) p.getValue();
-                outKey = p.getKey();
-                continue;
-            } else {
-                List<Writable> interVal = new ArrayList<Writable>();
-                for (Writable val : outVal) {
-                    p.process(val);
-                    if (p.getKey() != null && p.getValue() != null) {
-                        interVal.add(new Writable(new Pair<Object, Object>(p
-                                .getKey(), p.getValue())));
-                    } else {
-                        if (p.getValue() != null)
-                            interVal.add(new Writable(p.getValue()));
-                    }
-                }
-                outVal = interVal;
-            }
-        }
-        out.println(gson.toJson(outVal));
-    }
-
-    public static void startJobClient(String ip) {
-        new Thread(new JobClient(ip)).start();
     }
 }

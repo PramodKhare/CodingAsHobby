@@ -2,8 +2,9 @@ package com.neu.mrlite.common.datastructures;
 
 import java.io.Serializable;
 
-public class Writable implements Serializable {
-    private static final long serialVersionUID = -5256545999380063772L;
+public abstract class Writable implements Serializable, Comparable<Writable> {
+    private static final long serialVersionUID = 7198028059909547957L;
+
     private Object obj;
 
     public Writable(Object obj) {
@@ -14,7 +15,15 @@ public class Writable implements Serializable {
         return to.cast(obj);
     }
 
+    @Override
     public String toString() {
-        return obj.toString();
+        return this.serializeToJson();
     }
+
+    public abstract String serializeToJson();
+
+    public abstract Writable deserializeFromJson(final String jsonStr)
+            throws Exception;
+
+    public abstract int compareTo(Writable o);
 }

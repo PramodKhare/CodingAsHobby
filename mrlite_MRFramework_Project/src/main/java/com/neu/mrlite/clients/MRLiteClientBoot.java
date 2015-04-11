@@ -6,7 +6,7 @@ public class MRLiteClientBoot {
 
     public static void startClient(String ip) {
         Constants.IP = ip;
-        JobClient.startJobClient(ip);
+        new JobClient(ip);
     }
 
     public static void usageAndExit() {

@@ -1,6 +1,6 @@
 package com.neu.mrlite.master;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.neu.mrlite.common.ClientNode;
@@ -9,7 +9,7 @@ public class ClientNodesMap {
     public final Map<Integer, ClientNode> nodes;
 
     private ClientNodesMap() {
-        nodes = new HashMap<Integer, ClientNode>();
+        nodes = new LinkedHashMap<Integer, ClientNode>();
     }
 
     /**
@@ -62,5 +62,14 @@ public class ClientNodesMap {
      */
     public ClientNode getClientNode(final Integer nodeId) {
         return nodes.get(nodeId);
+    }
+
+    /**
+     * Returns total number of client nodes
+     * 
+     * @return integer value
+     */
+    public int size() {
+        return nodes.size();
     }
 }
