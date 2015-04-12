@@ -27,23 +27,23 @@ import java.util.List;
  */
 public class Assortment<T> implements Collection<T>, ParallelOperations<T>,
         Serializable {
-    private static final long serialVersionUID = -4020634386438501537L;
+    private static final long serialVersionUID = -7209166331043646984L;
+
     private List<T> list;
-    private static IOHandle IOHANDLE;
-    private static List<POCallback> exec = new ArrayList<POCallback>();
+    private IOHandle IOHANDLE;
+    private List<POCallback> exec = new ArrayList<POCallback>();
 
     public Assortment() {
-        list = new ArrayList<T>();
+        this.list = new ArrayList<T>();
     }
 
     /**
      * Map Operation
-     * 
      */
-    public <Q> Assortment<Q> parallel(POCallback callback) {
-        // TODO Auto-generated method stub
-        Assortment<Q> res = new Assortment<Q>();
-        exec.add(callback);
+    public <K extends Comparable<K>, V> Assortment<Pair<K, V>> parallel(
+            POCallback<K, V> callback) {
+        Assortment<Pair<K, V>> res = new Assortment<Pair<K, V>>();
+        this.exec.add(callback);
         return res;
     }
 
@@ -120,10 +120,10 @@ public class Assortment<T> implements Collection<T>, ParallelOperations<T>,
      * @param io
      * @return Assortment&lt;String&gt;
      */
-    public static Assortment<String> readInputFrom(IOHandle io) {
-        IOHANDLE = io;
+    public static Assortment<String> readInputFrom(final IOHandle io) {
         Assortment<String> newAssort = new Assortment<String>();
-        exec.add(new IOCallback() {
+        newAssort.IOHANDLE = io;
+        newAssort.exec.add(new IOCallback() {
             @Override
             public void process(Writable data) {
                 // dummy
@@ -137,9 +137,8 @@ public class Assortment<T> implements Collection<T>, ParallelOperations<T>,
                     while ((line = io.readLine()) != null) {
                         lines.add(new Writable(line));
                     }
-                    emit(lines);
+                    emit("INPUT_DATA", lines);
                 } catch (Exception e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
             }
@@ -147,16 +146,16 @@ public class Assortment<T> implements Collection<T>, ParallelOperations<T>,
         return newAssort;
     }
 
-    public static List<POCallback> getExecChain() {
-        return exec;
+    public List<POCallback> getExecChain() {
+        return this.exec;
     }
 
-    public static IOHandle getIOHandle() throws FileNotFoundException,
+    public IOHandle getIOHandle() throws FileNotFoundException,
             UnsupportedEncodingException {
-        return IOHANDLE;
+        return this.IOHANDLE;
     }
 
     public String toString() {
-        return list.toString();
+        return this.list.toString();
     }
 }

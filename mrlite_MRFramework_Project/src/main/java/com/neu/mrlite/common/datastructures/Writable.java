@@ -2,12 +2,19 @@ package com.neu.mrlite.common.datastructures;
 
 import java.io.Serializable;
 
-public abstract class Writable implements Serializable, Comparable<Writable> {
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+
+public class Writable<T> implements Serializable {
+    // , Comparable<Writable> {
     private static final long serialVersionUID = 7198028059909547957L;
 
-    private Object obj;
+    public T obj;
 
-    public Writable(Object obj) {
+    public Writable() {
+    }
+
+    public Writable(T obj) {
         this.obj = obj;
     }
 
@@ -20,10 +27,16 @@ public abstract class Writable implements Serializable, Comparable<Writable> {
         return this.serializeToJson();
     }
 
-    public abstract String serializeToJson();
+    public String serializeToJson() {
+        final Gson gson = new Gson();
+        return gson.toJson(this);
+    }
 
-    public abstract Writable deserializeFromJson(final String jsonStr)
-            throws Exception;
+    public static Writable deserializeFromJson(final String jsonStr)
+            throws JsonSyntaxException {
+        final Gson gson = new Gson();
+        return gson.fromJson(jsonStr, Writable.class);
+    }
 
-    public abstract int compareTo(Writable o);
+    // public abstract int compareTo(Writable o);
 }

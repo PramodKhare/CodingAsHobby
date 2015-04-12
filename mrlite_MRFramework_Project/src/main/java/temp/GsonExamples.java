@@ -1,9 +1,12 @@
 package temp;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gson.Gson;
 import com.neu.mrlite.common.JobConf;
+import com.neu.mrlite.common.datastructures.Writable;
 
 public class GsonExamples {
 
@@ -37,6 +40,22 @@ public class GsonExamples {
         My<String, String> obj2 = gson.fromJson(jsonStr, My.class);
         jsonStr = gson.toJson(obj2);
         System.out.println(jsonStr);
+        
+        System.out.println("-------------------------------------------------");
+        
+        List<String> t = new ArrayList<String>();
+        t.add("test1");
+        t.add("test2");
+        t.add("test3");
+        Writable wr = new Writable<List<String>>(t);
+        jsonStr = wr.toString();
+        System.out.println(" Serial Writable - "+jsonStr);
+        
+        System.out.println("-------------------------------------------------");
+        
+        wr = Writable.deserializeFromJson(jsonStr);
+        jsonStr = wr.toString();
+        System.out.println(" Serial Again Writable - "+jsonStr);
     }
 }
 

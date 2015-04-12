@@ -8,6 +8,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
 
+import com.neu.mrlite.common.Constants;
 import com.neu.mrlite.common.InMemStore;
 import com.neu.mrlite.common.datastructures.Pair;
 
@@ -16,14 +17,16 @@ public class MapOutputServer extends Thread {
     private ServerSocket socket;
     private boolean intr = false;
 
-    private MapOutputServer() throws IOException {
-        socket = new ServerSocket(2222);
+    private MapOutputServer(final int nodeId) throws IOException {
+        // e.g. Every Nodes's MapOutputServer will start at port = 8000 + nodeId
+        socket = new ServerSocket(Constants.BASE_MAP_SERVER_PORT + nodeId);
         start();
     }
 
-    public static void startMapOutputServer() throws IOException {
+    public static void startMapOutputServer(final int nodeId)
+            throws IOException {
         if (mapOutputServerSingleton == null) {
-            mapOutputServerSingleton = new MapOutputServer();
+            mapOutputServerSingleton = new MapOutputServer(nodeId);
         }
     }
 
