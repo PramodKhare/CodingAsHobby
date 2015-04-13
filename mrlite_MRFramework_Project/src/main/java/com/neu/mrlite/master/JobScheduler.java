@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.neu.io.FileSplitServer;
 import com.neu.mrlite.common.ClientNode;
+import com.neu.mrlite.common.Constants;
 import com.neu.mrlite.common.JobConf;
 import com.neu.mrlite.common.TaskConf;
 
@@ -25,6 +26,15 @@ public class JobScheduler implements Runnable {
                 runningJob = JobQueue.get().dequeueJob();
                 ClientNodesMap slaveNodes = ClientNodesMap.get();
 
+                // Total Reduce nodes cannot be more than total mapper nodes
+                // And also cannot be more than total number of (client nodes-1)
+                int totalReduceNodes = Constants.REDUCE_NODES;
+                if (runningJob.getNumberOfReduceTasks() > slaveNodes.size()) {
+                    totalReduceNodes = slaveNodes.size() - 1;
+                } else if (runningJob.getNumberOfReduceTasks() > 0) {
+                    totalReduceNodes = runningJob.getNumberOfReduceTasks();
+                }
+
                 /*********************************************************
                  * Execute Mapper Task
                  *********************************************************/
@@ -43,12 +53,10 @@ public class JobScheduler implements Runnable {
                         if (node == null) {
                             continue;
                         } else {
-                            // Create a JobServlet Thread for this Job-Task on
-                            // this slave node
+                            // Create a JobServlet Thread for this Job-Task on this slave node
                             TaskConf mapTask = TaskConf.createMapperTaskConf(
-                                    node, runningJob);
-                            // Add this thread to waitlist - list of threads to
-                            // wait on - till they complete
+                                    node, runningJob, totalReduceNodes);
+                            // Maintain list of all MapTask jobservlet config objects
                             mapNodesTasksList
                                     .add(new JobServlet(node, mapTask));
                         }
@@ -69,19 +77,52 @@ public class JobScheduler implements Runnable {
                 }
 
                 runningJob.setMapperTasks(mapNodesTasksList);
+
                 // At this point all Map Tasks have been finished, lets check if
                 // there is any reduce task to execute
+
                 /*********************************************************
                  * Execute Reducer Task
                  *********************************************************/
                 if (runningJob.getReducerClass() != null
                         && !runningJob.getReducerClass().trim().equals("")) {
                     List<JobServlet> reduceNodesTasksList = new ArrayList<JobServlet>();
-                    // Send the TaskConf to Reduce Nodes
 
-                    // Wait till all Reduce Nodes finish their tasks, and stream
-                    // their output to outputDir
+                    // Iterate over current clients to send them a reducer Task
+                    synchronized (slaveNodes) {
+                        // TODO - Make ClientNodesMap iterable
+                        for (int i = 0, j = 0; i < slaveNodes.size()
+                                && j < totalReduceNodes; i++) {
+                            ClientNode node = slaveNodes.getClientNode(i);
+                            if (node == null) {
+                                continue;
+                            } else {
+                                // create a JobServlet thread for this reduce job task on this slave node
+                                TaskConf reduceTask = TaskConf
+                                        .createReducerTaskConf(
+                                                mapNodesTasksList, runningJob,
+                                                j++);
+                                // Add this thread to waitlist - list of threads to wait on - till they complete
+                                reduceNodesTasksList.add(new JobServlet(node,
+                                        reduceTask));
+                            }
+                        }
+                    }
+                    // Wait till all Reduce Nodes finish their tasks, and stream their output to outputDir
 
+                    for (JobServlet reduceTask : reduceNodesTasksList) {
+                        try {
+                            if (reduceTask.isAlive()) {
+                                reduceTask.join();
+                            }
+                        } catch (InterruptedException e) {
+                            System.out
+                                    .println("Unable to wait for Reduce Task - "
+                                            + reduceTask.getTaskConf()
+                                                    .getTaskId());
+                            e.printStackTrace();
+                        }
+                    }
                     runningJob.setReducerTasks(reduceNodesTasksList);
                 }
 

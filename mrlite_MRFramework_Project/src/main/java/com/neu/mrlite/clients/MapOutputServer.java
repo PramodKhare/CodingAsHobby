@@ -85,17 +85,17 @@ public class MapOutputServer extends Thread {
             in = new BufferedReader(new InputStreamReader(
                     cilentSocket.getInputStream()));
             out = new PrintWriter(cilentSocket.getOutputStream(), true);
-            // One request will serve only key
+            // One request will serve only one key - but all its list of pairs will be streamed
             String line = in.readLine().trim();
             // Get the key i.e. map output partition key
-            if (line != null) {
+            if (line != null && !line.equals("")) {
                 try {
                     // this is serialized JobConf object, deserialize it
                     List<Pair> mapOutputPartition = (List<Pair>) InMemStore
                             .getValueForKey(line);
                     if (mapOutputPartition == null
                             || mapOutputPartition.isEmpty()) {
-                        out.println("ERROR: INVALID_MAP_PARTITION_KEY");
+                        out.println("NO RECORDS FOR PARTITION_KEY");
                     } else {
                         for (Pair p : mapOutputPartition) {
                             out.println(p.toString());

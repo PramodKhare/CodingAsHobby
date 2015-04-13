@@ -16,6 +16,7 @@ import com.google.gson.Gson;
 import com.neu.mrlite.common.InMemStore;
 import com.neu.mrlite.common.TaskConf;
 import com.neu.mrlite.common.datastructures.Assortment;
+import com.neu.mrlite.common.datastructures.HashPartitioner;
 import com.neu.mrlite.common.datastructures.IOCallback;
 import com.neu.mrlite.common.datastructures.IOHandle;
 import com.neu.mrlite.common.datastructures.POCallback;
@@ -26,6 +27,7 @@ public class MapperClientTask extends Thread {
     private final TaskConf task;
     private final PrintWriter out;
     private List<Writable> outVal;
+    private HashPartitioner partitioner = new HashPartitioner();
 
     public MapperClientTask(final TaskConf task, final PrintWriter out) {
         this.task = task;
@@ -39,12 +41,10 @@ public class MapperClientTask extends Thread {
             // Collect all user mapper functions to get all his POCallback chain
             Assortment collection = executeUserMapperFunction();
 
-            // STEP 2: Actually execute the POCallback chain from the returned
-            // Assortment
+            // STEP 2: Actually execute the POCallback chain from the returned Assortment
             execute(collection.getExecChain(), collection.getIOHandle());
 
-            // Partition the outVal i.e. List<Writable> into keyspace and save
-            // it into in-memory-map
+            // Partition the outVal i.e. List<Writable> into keyspace and save it into in-memory-map
             partitionMapOut();
 
         } catch (final Exception e) {
@@ -111,10 +111,21 @@ public class MapperClientTask extends Thread {
             }
         });
 
-        // Do the actual partioning
-
-        // Save individual partition with keys - as taskID_<partition_no> in
-        // InMemoryStor
-
+        // Do the actual partioning AND save individual partition with keys - as taskID_<partition_no> in InMemoryStore
+        for (Writable w : outVal) {
+            Pair pair = (Pair) w.cast(Pair.class);
+            int partitionNumber = partitioner.getPartition(pair.getKey(),
+                    pair.getValue(), task.getNumberOfReduceTasks());
+            // partitioner
+            String key = task.getTaskId() + "_" + partitionNumber;
+            List<Pair> partionPairList = (List<Pair>) InMemStore.getValueForKey(key);
+            if(partionPairList != null){
+                partionPairList.add(pair);
+            }else{
+                partionPairList = new ArrayList<Pair>();
+                partionPairList.add(pair);
+                InMemStore.putKeyValue(key, partionPairList);
+            }
+        }
     }
 }

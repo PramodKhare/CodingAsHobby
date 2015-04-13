@@ -66,5 +66,4 @@ public class Pair<K extends Comparable<K>, V> implements Serializable,
     public int compareTo(Pair<K, V> anotherPair) {
         return (this.getKey().compareTo(anotherPair.getKey()));
     }
-
 }

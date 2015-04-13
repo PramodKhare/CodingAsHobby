@@ -1,11 +1,12 @@
 package com.neu.mrlite.common;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
-import com.neu.mrlite.master.JobServer;
+import com.neu.mrlite.master.JobServlet;
 
 public class TaskConf implements Serializable {
     private static final long serialVersionUID = 4610481245402892811L;
@@ -155,7 +156,8 @@ public class TaskConf implements Serializable {
     }
 
     public static synchronized TaskConf createMapperTaskConf(
-            final ClientNode node, final JobConf jobConf) {
+            final ClientNode node, final JobConf jobConf,
+            final int totalReduceNodes) {
         TaskConf taskConf = new TaskConf();
 
         /* Common Task Properties */
@@ -169,13 +171,13 @@ public class TaskConf implements Serializable {
         taskConf.setMapperClass(jobConf.getMapperClass());
         taskConf.setIoHandleServerUrl(node.getClientSocket().getLocalAddress()
                 .toString());
-        taskConf.setNumberOfReduceTasks(jobConf.getNumberOfReduceTasks() < 1 ? 1
-                : jobConf.getNumberOfReduceTasks());
+        taskConf.setNumberOfReduceTasks(totalReduceNodes);
         return taskConf;
     }
 
     public static synchronized TaskConf createReducerTaskConf(
-            final List<JobServer> nodes, final JobConf jobConf) {
+            final List<JobServlet> nodeJobServlets, final JobConf jobConf,
+            final int partitionToStreamFrom) {
         TaskConf taskConf = new TaskConf();
         /* Common Task Properties */
         taskConf.setExecutableJar(jobConf.getExecutableJar());
@@ -189,8 +191,38 @@ public class TaskConf implements Serializable {
         // taskConf.setIoHandleServerUrl(node.getClientSocket().getLocalAddress().toString());
         taskConf.setOutDirPath(jobConf.getOutDirPath());
 
-        /* Create MapperNodeInfo for each mapper jobservlet */ 
-
+        /* Create MapperNodeInfo for each mapper jobservlet */
+        taskConf.setMapperNodeInfo(createMapperNodesInfoList(nodeJobServlets));
+        // This Reducer Node will stream the Mapper outputs from each map node -
+        // only the given partition
+        taskConf.setPartitionToStreamForReducer(partitionToStreamFrom);
         return taskConf;
+    }
+
+    private static List<MapperNodeInfo> createMapperNodesInfoList(
+            final List<JobServlet> nodeJobServlets) {
+        if (nodeJobServlets == null || nodeJobServlets.isEmpty()) {
+            return null;
+        }
+        final List<MapperNodeInfo> mapInfoList = new ArrayList<MapperNodeInfo>();
+
+        for (JobServlet mapTask : nodeJobServlets) {
+            MapperNodeInfo mapNodeInfo = new MapperNodeInfo();
+
+            // Task Id for map-task is required for getting value from In-Memory-Store
+            mapNodeInfo.setMapTaskId(mapTask.getTaskConf().getTaskId());
+
+            // Store the remote client's IP address
+            mapNodeInfo.setShuffleSocketIp(mapTask.getClientSocket()
+                    .getInetAddress().getHostAddress());
+
+            // Get the Remote Client's NodeId - from which we can calculate -MapoutputServer's port number
+            mapNodeInfo.setShuffleSocketPort(Constants.BASE_MAP_SERVER_PORT
+                    + mapTask.getClientNodeId());
+
+            mapInfoList.add(mapNodeInfo);
+        }
+
+        return mapInfoList;
     }
 }

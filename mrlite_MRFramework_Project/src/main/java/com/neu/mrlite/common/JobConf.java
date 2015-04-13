@@ -24,7 +24,7 @@ public class JobConf implements Serializable {
     private String mapperClass;
     private String reducerClass;
     private int numberOfMapTasks;
-    private int numberOfReduceTasks;
+    private int numberOfReduceTasks = 1;
     private String inputFilePath;
     private String outDirPath;
     private boolean isCompleted = false;

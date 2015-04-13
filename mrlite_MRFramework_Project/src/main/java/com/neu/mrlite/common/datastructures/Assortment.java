@@ -37,6 +37,10 @@ public class Assortment<T> implements Collection<T>, ParallelOperations<T>,
         this.list = new ArrayList<T>();
     }
 
+    public Assortment(final List<T> list) {
+        this.list = list;
+    }
+
     /**
      * Map Operation
      */
@@ -94,8 +98,7 @@ public class Assortment<T> implements Collection<T>, ParallelOperations<T>,
     }
 
     public boolean addAll(Collection<? extends T> c) {
-        // TODO Auto-generated method stub
-        return false;
+        return list.addAll(c);
     }
 
     public boolean removeAll(Collection<?> c) {

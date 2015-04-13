@@ -19,7 +19,7 @@ public class HashPartitioner<K2, V2> implements Partitioner<K2, V2> {
 
     public static void main(String[] args) {
         List<Pair<Integer, String>> t = new ArrayList<Pair<Integer, String>>();
-        t.add(new Pair<Integer, String>(1, "test1"));
+        t.add(new Pair<Integer, String>(0, "test1"));
         t.add(new Pair<Integer, String>(1, "test2"));
         t.add(new Pair<Integer, String>(4, "test4"));
         t.add(new Pair<Integer, String>(1, "test3"));
