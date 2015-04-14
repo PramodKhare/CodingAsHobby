@@ -1,14 +1,17 @@
 package com.neu.mrlite.master;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
-
-import com.neu.mrlite.common.JobConf;
-import com.neu.mrlite.common.JobQueue;
+import java.net.URL;
+import java.net.URLClassLoader;
 
 public class JobListener implements Runnable {
     private boolean intr = false;
@@ -34,15 +37,20 @@ public class JobListener implements Runnable {
                         client.getInputStream()));
                 out = new PrintWriter(client.getOutputStream(), true);
                 String line;
-                while ((line = in.readLine()) != null) {
+                while ((line = in.readLine().trim()) != null) {
                     try {
                         // this is serialized JobConf object, deserialize it
-                        JobConf job = JobConf.deserializeFromJson(line);
-                        
-                    } catch (final IllegalStateException e) {
+                        String[] cmd = line.split("\\s+");
+                        if (cmd.length > 3) {
+                            // execute the main class - main method directly from here
+                            loadAndExecuteMainClass(cmd);
+                            out.println("Job scheduled successfully!");
+                        } else
+                            out.println("ERROR: Invalid job command!\nUSAGE: mrlite -jar <jar_name> <main_class> <input_file_path> <output_directory_path>");
+                    } /*catch (final IllegalStateException e) {
                         e.printStackTrace();
                         out.println("JobQueue is full, can't schedule the job now, try again");
-                    } catch (final Exception e) {
+                      } */catch (final Exception e) {
                         e.printStackTrace();
                         out.println(e.getMessage());
                         System.out
@@ -70,6 +78,43 @@ public class JobListener implements Runnable {
                 ex.printStackTrace();
             }
         }
+    }
+
+    /**
+     * Execute the static main method of main-class of MR job executable jar
+     * which will do the scheduling of current JobConf object
+     * 
+     * @param args
+     * @throws MalformedURLException
+     * @throws ClassNotFoundException
+     * @throws SecurityException
+     * @throws NoSuchMethodException
+     * @throws InvocationTargetException
+     * @throws IllegalArgumentException
+     * @throws IllegalAccessException
+     */
+    private void loadAndExecuteMainClass(String[] args)
+            throws MalformedURLException, ClassNotFoundException,
+            NoSuchMethodException, SecurityException, IllegalAccessException,
+            IllegalArgumentException, InvocationTargetException {
+        // load user's executable jar
+        File file = new File(args[2]);
+        URL url = file.toURI().toURL();
+        URL[] urls = new URL[] { url };
+        ClassLoader cl = new URLClassLoader(urls);
+
+        // Load Mapper Class
+        Class<?> cls = cl.loadClass(args[3]);
+
+        // Copy the Input String Arguments and execute the main method
+        String argsForMainClass[] = new String[(args.length - 4)];
+        System.arraycopy(args, 4, argsForMainClass, 0, (args.length - 4));
+
+        // Get handle of run method using reflection
+        Method runMethod = cls.getMethod("main", String[].class);
+
+        // Invoke run method
+        runMethod.invoke(null, (Object) argsForMainClass);
     }
 
     public void interrupt() {
