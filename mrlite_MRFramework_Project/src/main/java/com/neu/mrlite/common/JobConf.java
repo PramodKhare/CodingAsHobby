@@ -1,7 +1,6 @@
 package com.neu.mrlite.common;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.google.gson.Gson;
@@ -9,7 +8,6 @@ import com.google.gson.JsonSyntaxException;
 import com.neu.mrlite.common.datastructures.Mapper;
 import com.neu.mrlite.common.datastructures.Reducer;
 import com.neu.mrlite.common.exception.InvalidJobConfException;
-import com.neu.mrlite.master.JobServlet;
 
 /**
  * Holds Job Configuration details like executable jar name, input file path,
@@ -152,7 +150,7 @@ public class JobConf implements Serializable {
         return reducerClass;
     }
 
-    public void setReducerClass(final Class<? extends Mapper> reducerClass) {
+    public void setReducerClass(final Class<? extends Reducer> reducerClass) {
         this.reducerClass = reducerClass.getName();
     }
 
@@ -217,36 +215,16 @@ public class JobConf implements Serializable {
         return mapperTasks;
     }
 
-    /**
-     * Replaces any previous value with new list's TaskConfs list
-     * 
-     * @param mapTasks
-     */
-    public void setMapperTasks(final List<JobServlet> mapTasks) {
-        if (mapTasks != null && !mapTasks.isEmpty()) {
-            this.mapperTasks = new ArrayList<TaskConf>();
-            for (JobServlet mapTask : mapTasks) {
-                this.mapperTasks.add(mapTask.getTaskConf());
-            }
-        }
-    }
-
     public List<TaskConf> getReducerTasks() {
         return reducerTasks;
     }
 
-    /**
-     * Replaces any previous value with new list's TaskConfs list
-     * 
-     * @param mapTasks
-     */
-    public void setReducerTasks(final List<JobServlet> reduceTasks) {
-        if (reduceTasks != null && !reduceTasks.isEmpty()) {
-            this.reducerTasks = new ArrayList<TaskConf>();
-            for (JobServlet reduceTask : reduceTasks) {
-                this.reducerTasks.add(reduceTask.getTaskConf());
-            }
-        }
+    public void setMapperTasks(List<TaskConf> mapperTasks) {
+        this.mapperTasks = mapperTasks;
+    }
+
+    public void setReducerTasks(List<TaskConf> reducerTasks) {
+        this.reducerTasks = reducerTasks;
     }
 
     @Override
@@ -267,6 +245,7 @@ public class JobConf implements Serializable {
 
     /**
      * Adds the itself (JobConf) into JobQueue list
+     * 
      * @return
      * @throws InvalidJobConfException
      */

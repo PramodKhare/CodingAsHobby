@@ -65,8 +65,8 @@ public class JobScheduler implements Runnable {
                     scheduleReduceTasksToSlaveNodes(mapNodesTasksList);
                 }
                 // Reset the Map and Reduce Task counters
-                TaskConf.setMapTaskCounter(0);
-                TaskConf.setReduceTaskCounter(0);
+                TaskConfFactory.setMapTaskCounter(0);
+                TaskConfFactory.setReduceTaskCounter(0);
 
                 System.out.println("Job Id: " + runningJob.getJobId()
                         + " is finished");
@@ -102,7 +102,7 @@ public class JobScheduler implements Runnable {
                     continue;
                 } else {
                     // create a JobServlet thread for this reduce job task on this slave node
-                    TaskConf reduceTask = TaskConf
+                    TaskConf reduceTask = TaskConfFactory
                             .createReducerTaskConf(node, mapNodesTasksList,
                                     runningJob, mapPartitionToCopy++);
                     // Add this thread to waitlist - list of threads to wait on - till they complete
@@ -124,7 +124,7 @@ public class JobScheduler implements Runnable {
             }
         }
         // Set the task list for history-book-keeping purposes
-        runningJob.setReducerTasks(reduceNodesTasksList);
+        setReducerTasks(runningJob, reduceNodesTasksList);
         return reduceNodesTasksList;
     }
 
@@ -156,8 +156,8 @@ public class JobScheduler implements Runnable {
                     continue;
                 } else {
                     // Create a JobServlet Thread for this Job-Task on this slave node
-                    TaskConf mapTask = TaskConf.createMapperTaskConf(node,
-                            runningJob, totalReduceNodes);
+                    TaskConf mapTask = TaskConfFactory.createMapperTaskConf(
+                            node, runningJob, totalReduceNodes);
                     // Maintain list of all MapTask jobservlet config objects
                     mapNodesTasksList.add(new JobServlet(node, mapTask));
                 }
@@ -177,7 +177,7 @@ public class JobScheduler implements Runnable {
             }
         }
         // Set the task list for history-book-keeping purposes
-        runningJob.setReducerTasks(mapNodesTasksList);
+        setReducerTasks(runningJob, mapNodesTasksList);
         return mapNodesTasksList;
     }
 
@@ -219,5 +219,39 @@ public class JobScheduler implements Runnable {
             jobSchedulerSingleton.interrupt();
         }
         jobSchedulerSingleton = null;
+    }
+
+    /**
+     * Replaces any previous value with new list's TaskConfs list
+     * 
+     * @param runningJob
+     * 
+     * @param mapTasks
+     */
+    private void setMapperTasks(final JobConf runningJob,
+            final List<JobServlet> mapTasks) {
+        if (mapTasks != null && !mapTasks.isEmpty()) {
+            List<TaskConf> mapperTasks = new ArrayList<TaskConf>();
+            for (JobServlet mapTask : mapTasks) {
+                mapperTasks.add(mapTask.getTaskConf());
+            }
+            runningJob.setMapperTasks(mapperTasks);
+        }
+    }
+
+    /**
+     * Replaces any previous value with new list's TaskConfs list
+     * 
+     * @param mapTasks
+     */
+    private void setReducerTasks(final JobConf runningJob,
+            final List<JobServlet> reduceTasks) {
+        if (reduceTasks != null && !reduceTasks.isEmpty()) {
+            List<TaskConf> reducerTasks = new ArrayList<TaskConf>();
+            for (JobServlet reduceTask : reduceTasks) {
+                reducerTasks.add(reduceTask.getTaskConf());
+            }
+            runningJob.setReducerTasks(reducerTasks);
+        }
     }
 }
