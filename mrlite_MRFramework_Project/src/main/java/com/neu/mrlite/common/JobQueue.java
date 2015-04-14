@@ -1,10 +1,7 @@
-package com.neu.mrlite.master;
+package com.neu.mrlite.common;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-
-import com.neu.mrlite.common.Constants;
-import com.neu.mrlite.common.JobConf;
 
 /**
  * Singleton class - maintains the list of Jobs to be waiting for execution on
@@ -46,7 +43,7 @@ public class JobQueue {
     }
 
     /**
-     * Removes the new job to e executed from the jobqueue - blocks if queue is
+     * Removes the new job to be executed from the jobqueue - blocks if queue is
      * empty until any new JobConf object is available
      * 
      * @return

@@ -21,12 +21,11 @@ import com.neu.mrlite.common.datastructures.IOCallback;
 import com.neu.mrlite.common.datastructures.IOHandle;
 import com.neu.mrlite.common.datastructures.POCallback;
 import com.neu.mrlite.common.datastructures.Pair;
-import com.neu.mrlite.common.datastructures.Writable;
 
 public class MapperClientTask extends Thread {
     private final TaskConf task;
     private final PrintWriter out;
-    private List<Writable> outVal;
+    private List<Pair> outVal;
     private HashPartitioner partitioner = new HashPartitioner();
 
     public MapperClientTask(final TaskConf task, final PrintWriter out) {
@@ -38,7 +37,7 @@ public class MapperClientTask extends Thread {
     @Override
     public void run() {
         try {
-            // Collect all user mapper functions to get all his POCallback chain
+            // STEP 1: Collect all user mapper functions to get all his POCallback chain
             Assortment collection = executeUserMapperFunction();
 
             // STEP 2: Actually execute the POCallback chain from the returned Assortment
@@ -53,6 +52,21 @@ public class MapperClientTask extends Thread {
         }
     }
 
+    /**
+     * This method doesnot actually execute the User's callback function chain,
+     * but just adds them to a Assortment. This user-defined callback chain
+     * would be executed on actual data later when we stream the records from
+     * ioserver
+     * 
+     * @return
+     * @throws MalformedURLException
+     * @throws ClassNotFoundException
+     * @throws NoSuchMethodException
+     * @throws SecurityException
+     * @throws IllegalAccessException
+     * @throws IllegalArgumentException
+     * @throws InvocationTargetException
+     */
     private Assortment executeUserMapperFunction()
             throws MalformedURLException, ClassNotFoundException,
             NoSuchMethodException, SecurityException, IllegalAccessException,
@@ -76,6 +90,12 @@ public class MapperClientTask extends Thread {
                 task.getOutDirPath());
     }
 
+    /**
+     * Actually Executes the user-defined callback chain onto the Assortment
+     * 
+     * @param exec
+     * @param io
+     */
     private void execute(List<POCallback> exec, IOHandle io) {
         Object outKey;
         Gson gson = new Gson();
@@ -83,15 +103,14 @@ public class MapperClientTask extends Thread {
             System.out.println(p);
             if (p instanceof IOCallback) {
                 ((IOCallback) p).process(io);
-                outVal = (List<Writable>) p.getValue();
+                outVal = (List<Pair>) p.getValue();
                 outKey = p.getKey();
                 continue;
             } else {
-                List<Writable> interVal = new ArrayList<Writable>();
-                for (Writable val : outVal) {
+                List<Pair> interVal = new ArrayList<Pair>();
+                for (Pair val : outVal) {
                     p.process(val);
-                    interVal.add(new Writable(
-                            new Pair(p.getKey(), p.getValue())));
+                    interVal.add(new Pair(p.getKey(), p.getValue()));
                 }
                 outVal = interVal;
             }
@@ -103,25 +122,24 @@ public class MapperClientTask extends Thread {
     @SuppressWarnings("unchecked")
     private void partitionMapOut() {
         // First sort the outVal - based on Pair's compareTo method i.e. keys
-        Collections.sort(outVal, new Comparator<Writable>() {
+        Collections.sort(outVal, new Comparator<Pair>() {
             @Override
-            public int compare(Writable o1, Writable o2) {
-                return ((Pair) o1.cast(Pair.class)).compareTo(((Pair) o2
-                        .cast(Pair.class)));
+            public int compare(Pair o1, Pair o2) {
+                return (o1.compareTo(o2));
             }
         });
 
         // Do the actual partioning AND save individual partition with keys - as taskID_<partition_no> in InMemoryStore
-        for (Writable w : outVal) {
-            Pair pair = (Pair) w.cast(Pair.class);
+        for (Pair pair : outVal) {
             int partitionNumber = partitioner.getPartition(pair.getKey(),
                     pair.getValue(), task.getNumberOfReduceTasks());
             // partitioner
             String key = task.getTaskId() + "_" + partitionNumber;
-            List<Pair> partionPairList = (List<Pair>) InMemStore.getValueForKey(key);
-            if(partionPairList != null){
+            List<Pair> partionPairList = (List<Pair>) InMemStore
+                    .getValueForKey(key);
+            if (partionPairList != null) {
                 partionPairList.add(pair);
-            }else{
+            } else {
                 partionPairList = new ArrayList<Pair>();
                 partionPairList.add(pair);
                 InMemStore.putKeyValue(key, partionPairList);

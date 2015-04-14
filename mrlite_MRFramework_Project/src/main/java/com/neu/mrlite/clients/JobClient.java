@@ -8,19 +8,19 @@ import java.net.Socket;
 import java.util.List;
 
 import com.neu.mrlite.common.TaskConf;
-import com.neu.mrlite.common.datastructures.Writable;
+import com.neu.mrlite.common.datastructures.Pair;
 
-//TODO Make use of Logger instead of sysouts
+//TODO Make use of java.util.Logger instead of sysouts
 
 public class JobClient extends Thread {
-    static List<Writable> outVal = null;
-    private PrintWriter out;
+    static List<Pair> outVal = null;
     private Socket socket;
-    private BufferedReader in;
-    private String masterIp;
+    private BufferedReader inputFromMaster;
+    private PrintWriter outputToMaster;
     private int nodeId;
+    private String masterIp;
 
-    public JobClient(String masterIp) {
+    public JobClient(final String masterIp) {
         this.masterIp = masterIp;
         start();
     }
@@ -30,8 +30,9 @@ public class JobClient extends Thread {
     public void run() {
         try {
             this.socket = new Socket(this.masterIp, 2120);
-            this.out = new PrintWriter(this.socket.getOutputStream(), true);
-            this.in = new BufferedReader(new InputStreamReader(
+            this.outputToMaster = new PrintWriter(
+                    this.socket.getOutputStream(), true);
+            this.inputFromMaster = new BufferedReader(new InputStreamReader(
                     this.socket.getInputStream()));
             receiveNodeIdAndExecuteTask();
         } catch (final Exception e) {
@@ -39,13 +40,13 @@ public class JobClient extends Thread {
         } finally {
             System.out.println("Shutting down the client");
             try {
-                if (in != null) {
-                    in.close();
-                    in = null;
+                if (inputFromMaster != null) {
+                    inputFromMaster.close();
+                    inputFromMaster = null;
                 }
-                if (out != null) {
-                    out.close();
-                    out = null;
+                if (outputToMaster != null) {
+                    outputToMaster.close();
+                    outputToMaster = null;
                 }
                 this.socket.close();
             } catch (IOException e) {
@@ -60,22 +61,22 @@ public class JobClient extends Thread {
      * @throws IOException
      */
     private void receiveNodeIdAndExecuteTask() throws IOException {
-        String line = this.in.readLine();
-        // First receive node_id i.e. CLIENT_NUMBER
-        line = line.trim();
+        String line = this.inputFromMaster.readLine().trim();
+        // First receive node_id i.e. "CLIENT_NUMBER X"
+
         if (!line.startsWith("CLIENT_NUMBER")) {
             System.out
                     .println("Unable to establish CLIENT_NUMBER communication, closing socket connection");
         } else {
             try {
                 this.nodeId = Integer.parseInt(line.split(" ")[1]);
-                this.out.println("CLIENT_NUMBER_ACCEPTED");
+                this.outputToMaster.println("CLIENT_NUMBER_ACCEPTED");
                 System.out
-                        .println("Client Number communication sequence complete - "
+                        .println("Client Number communication sequence complete: "
                                 + line);
-                // Start the MapOutputServer which serves the mapper output from
-                // In-Memory-Store
+                // Start the MapOutputServer which serves the mapper output from In-Memory-Store
                 MapOutputServer.startMapOutputServer(this.nodeId);
+
                 // And then execute the actual job
                 executeTask();
             } catch (final Exception e) {
@@ -96,7 +97,7 @@ public class JobClient extends Thread {
         MapperClientTask mapClientTask;
         ReducerClientTask reduceClientTask;
 
-        while ((line = this.in.readLine()) != null) {
+        while ((line = this.inputFromMaster.readLine().trim()) != null) {
             try {
                 // this is serialized TaskConf object, deserialize it
                 TaskConf task = TaskConf.deserializeFromJson(line);
@@ -104,18 +105,21 @@ public class JobClient extends Thread {
                 // Decide if its a Mapper task or reducer task
                 if (task.isMapperTask()) {
                     // Start Map Task thread
-                    mapClientTask = new MapperClientTask(task, this.out);
+                    mapClientTask = new MapperClientTask(task,
+                            this.outputToMaster);
                     mapClientTask.join();
                 } else {
                     // Start Reduce Task Thread
-                    reduceClientTask = new ReducerClientTask(task, this.out);
+                    reduceClientTask = new ReducerClientTask(task,
+                            this.outputToMaster);
                     reduceClientTask.join();
                 }
                 System.out.println(task.isMapperTask() ? "JobClient: Mapper "
                         : "Reducer " + "Task is complete");
             } catch (final Exception e) {
                 e.printStackTrace();
-                this.out.println("Invalid Task configuration provided");
+                this.outputToMaster
+                        .println("Invalid Task configuration provided");
             }
         }
     }

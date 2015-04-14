@@ -15,7 +15,6 @@ import com.neu.mrlite.common.TaskConf;
 import com.neu.mrlite.common.datastructures.Assortment;
 import com.neu.mrlite.common.datastructures.POCallback;
 import com.neu.mrlite.common.datastructures.Pair;
-import com.neu.mrlite.common.datastructures.Writable;
 
 public class ReducerClientTask extends Thread {
     private final TaskConf task;
@@ -90,7 +89,7 @@ public class ReducerClientTask extends Thread {
             System.out.println(p);
             List<Pair> interVal = new ArrayList<Pair>();
             for (Pair val : groupedByKeyResults) {
-                p.process(new Writable(val));
+                p.process(val);
                 interVal.add(new Pair(p.getKey(), p.getValue()));
             }
             groupedByKeyResults = interVal;

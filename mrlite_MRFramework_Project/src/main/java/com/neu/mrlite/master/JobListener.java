@@ -8,6 +8,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import com.neu.mrlite.common.JobConf;
+import com.neu.mrlite.common.JobQueue;
 
 public class JobListener implements Runnable {
     private boolean intr = false;

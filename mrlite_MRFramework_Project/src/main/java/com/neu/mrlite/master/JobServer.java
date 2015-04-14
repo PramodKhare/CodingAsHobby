@@ -28,11 +28,14 @@ public class JobServer {
                     .println("Job Server already running, please restart the job server if you need");
             return;
         }
+
         isStarted = true;
         // Start the ClientNodeListener
         ClientNodeListener.startClientNodeListener();
+
         // Start the JobScheduler
         JobScheduler.startJobScheduler();
+
         // First Start the JobListener
         JobListener.startJobListener();
     }

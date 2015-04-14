@@ -44,8 +44,10 @@ public class Assortment<T> implements Collection<T>, ParallelOperations<T>,
     /**
      * Map Operation
      */
-    public <K extends Comparable<K>, V> Assortment<Pair<K, V>> parallel(
-            POCallback<K, V> callback) {
+
+    @Override
+    public <X extends Comparable<X>, Y, K extends Comparable<K>, V> Assortment<Pair<K, V>> parallel(
+            POCallback<X, Y, K, V> callback) {
         Assortment<Pair<K, V>> res = new Assortment<Pair<K, V>>();
         this.exec.add(callback);
         return res;
@@ -123,27 +125,30 @@ public class Assortment<T> implements Collection<T>, ParallelOperations<T>,
      * @param io
      * @return Assortment&lt;String&gt;
      */
-    public static Assortment<String> readInputFrom(final IOHandle io) {
-        Assortment<String> newAssort = new Assortment<String>();
+    public static Assortment<Pair<Long, String>> readInputFrom(final IOHandle io) {
+        Assortment<Pair<Long, String>> newAssort = new Assortment<Pair<Long, String>>();
         newAssort.IOHANDLE = io;
         newAssort.exec.add(new IOCallback() {
             @Override
-            public void process(Writable data) {
-                // dummy
-            }
-
-            @Override
-            public void process(IOHandle io) {
-                List<Writable> lines = new ArrayList<Writable>();
+            public void process(final IOHandle io) {
+                List<Pair<Long, String>> lines = new ArrayList<Pair<Long, String>>();
                 String line;
+                long lineNumber = 1;
                 try {
                     while ((line = io.readLine()) != null) {
-                        lines.add(new Writable(line));
+                        // TODO Convert Writable to Pair - as pair itself is sufficient
+                        // So IOCallBack would be of type <Integer, String> i.e. Line Number and line contents
+                        lines.add(new Pair<Long, String>(lineNumber++, line));
                     }
                     emit("INPUT_DATA", lines);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+            }
+
+            @Override
+            public void process(Pair data) {
+                // Dummy method implementation - doesn't do anything
             }
         });
         return newAssort;

@@ -51,42 +51,55 @@ public class MapOutputServer extends Thread {
 
     @Override
     public void run() {
+        System.out.println("MapOutputServer listening on:"
+                + socket.getInetAddress().getHostAddress() + ":"
+                + socket.getLocalPort());
         try {
-            System.out.println("MapOutputServer listening on:"
-                    + socket.getInetAddress() + ":" + socket.getLocalPort());
             while (!isInterrupted()) {
-                // Accepted the Reducer Client Socket connection
-                Socket cilentSocket = socket.accept();
-                serveMapOutput(cilentSocket);
+                try {
+                    // Accept the Reducer Client Socket connection, for copying map-output partitions
+                    Socket cilentSocket = socket.accept();
+                    serveMapOutputPartition(cilentSocket);
+                } catch (final IOException e) {
+                    System.out
+                            .println("Unable to serve map-output-partition request!");
+                    e.printStackTrace();
+                }
             }
+        } finally {
+            // Finally shutdown the Map Output Server
             System.out.println("Stopped MapOutputServer:"
                     + socket.getInetAddress() + ":" + socket.getLocalPort());
-            socket.close();
-        } catch (final IOException e) {
-            e.printStackTrace();
+            try {
+                socket.close();
+            } catch (final IOException io) {
+                io.printStackTrace();
+            }
         }
     }
 
     /**
-     * Communication protocol - Reducer client will send the mapoutkey for which
-     * it needs the shuffle data for. If no such data exists in the
-     * In-Memory-Store of Client then it will send ERROR message and close the
-     * Socket Connection
+     * Communication Protocol - Reducer client will send the mapoutputkey e.g.
+     * TaksId_<partition_number> for which it needs the shuffle data for. If no
+     * such data exists in the In-Memory-Store of this client node then it will
+     * send ERROR message and close the Socket Connection
      * 
      * @param cilentSocket
      * @throws IOException
      */
     @SuppressWarnings("unchecked")
-    public static void serveMapOutput(final Socket cilentSocket)
+    public static void serveMapOutputPartition(final Socket cilentSocket)
             throws IOException {
-        BufferedReader in = null;
-        PrintWriter out = null;
+        BufferedReader inputFromReduceNode = null;
+        PrintWriter outputToReduceNode = null;
         try {
-            in = new BufferedReader(new InputStreamReader(
+            inputFromReduceNode = new BufferedReader(new InputStreamReader(
                     cilentSocket.getInputStream()));
-            out = new PrintWriter(cilentSocket.getOutputStream(), true);
+            outputToReduceNode = new PrintWriter(
+                    cilentSocket.getOutputStream(), true);
+
             // One request will serve only one key - but all its list of pairs will be streamed
-            String line = in.readLine().trim();
+            String line = inputFromReduceNode.readLine().trim();
             // Get the key i.e. map output partition key
             if (line != null && !line.equals("")) {
                 try {
@@ -95,27 +108,34 @@ public class MapOutputServer extends Thread {
                             .getValueForKey(line);
                     if (mapOutputPartition == null
                             || mapOutputPartition.isEmpty()) {
-                        out.println("NO RECORDS FOR PARTITION_KEY");
+                        outputToReduceNode
+                                .println("NO RECORDS FOR PARTITION_KEY");
                     } else {
                         for (Pair p : mapOutputPartition) {
-                            out.println(p.toString());
+                            outputToReduceNode.println(p.toString());
                         }
-                        out.println("SHUFFLE_COMPLETE");
+                        outputToReduceNode.println("SHUFFLE_COMPLETE");
+                        System.out
+                                .println("Sent all the map output pairs for key "
+                                        + line);
                     }
                 } catch (final Exception e) {
                     e.printStackTrace();
-                    out.println("ERROR: UNABLE_TO_SEND_MAP_PARTITION");
+                    outputToReduceNode
+                            .println("ERROR: UNABLE_TO_SEND_MAP_PARTITION");
                 }
+            } else {
+                outputToReduceNode.println("NO RECORDS FOR PARTITION_KEY");
             }
         } catch (final Exception ex) {
             ex.printStackTrace();
         } finally {
             try {
-                if (out != null) {
-                    out.close();
+                if (outputToReduceNode != null) {
+                    outputToReduceNode.close();
                 }
-                if (in != null) {
-                    in.close();
+                if (inputFromReduceNode != null) {
+                    inputFromReduceNode.close();
                 }
                 if (cilentSocket != null) {
                     cilentSocket.close();

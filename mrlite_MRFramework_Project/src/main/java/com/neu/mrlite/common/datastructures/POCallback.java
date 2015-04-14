@@ -7,7 +7,7 @@ package com.neu.mrlite.common.datastructures;
  * @author nikit T determines what type of data does the callback processes
  * @param <T>
  */
-public abstract class POCallback<K extends Comparable<K>, V> {
+public abstract class POCallback<X extends Comparable<X>, Y, K extends Comparable<K>, V> {
     /**
      * naive emit result collectors
      */
@@ -20,7 +20,7 @@ public abstract class POCallback<K extends Comparable<K>, V> {
      * 
      * @param data
      */
-    public abstract void process(Writable data);
+    public abstract void process(Pair<X, Y> data);
 
     /**
      * output of the process execution needs to be collected through this method

@@ -5,16 +5,17 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import com.neu.mrlite.common.ClientNode;
+import com.neu.mrlite.common.ClientNodesMap;
 import com.neu.mrlite.common.NodeIdGenerator;
 
-public class ClientNodeListener implements Runnable {
+public class ClientNodeListener extends Thread {
     private static ClientNodeListener clientNodeListenerSingleton;
     private ServerSocket socket;
     private boolean intr = false;
 
     private ClientNodeListener() throws IOException {
         socket = new ServerSocket(2120);
-        new Thread(clientNodeListenerSingleton).start();
+        start();
     }
 
     public static void startClientNodeListener() throws IOException {
@@ -45,18 +46,25 @@ public class ClientNodeListener implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println("Opened server connection:"
+            // Started Listening for Clients on port : 2120
+            System.out.println("Started Listening for Clients on port: "
                     + socket.getLocalPort());
+            // Listen continuously until interrupted
             while (!isInterrupted()) {
-                // Accepted the Client Socket
-                Socket cilentSocket = socket.accept();
-                saveClientNodeDetails(cilentSocket);
+
+                try {
+                    // Accepted the incoming client socket connections
+                    Socket cilentSocket = socket.accept();
+                    saveClientNodeDetails(cilentSocket);
+                } catch (final Exception e) {
+
+                }
             }
-            System.out.println("Closed ClientNodeListener:"
-                    + socket.getLocalPort());
             socket.close();
+            System.out.println("ClientNodeListener Stopped.");
         } catch (IOException e) {
-            // TODO Auto-generated catch block
+            System.out
+                    .println("Unable to close ClientNodeListener server socket.");
             e.printStackTrace();
         }
     }
@@ -72,11 +80,12 @@ public class ClientNodeListener implements Runnable {
             throws IOException {
         ClientNode clientNode = new ClientNode(cilentSocket,
                 NodeIdGenerator.generateNodeId());
-        // First send the node its NodeId Number
+
+        // First send the Client node its assigned NodeId number
         clientNode.getOutputToClient().println(
                 "CLIENT_NUMBER " + clientNode.getNodeId());
-        // Confirm it received and accepted it, then only add it
-        // into the nodes list
+
+        // Confirm it received and accepted it, then only add it into the nodes list
         String accepted = clientNode.getInputFromClient().readLine().trim();
         if (accepted.equals("CLIENT_NUMBER_ACCEPTED")) {
             // Then append it into client nodes list

@@ -26,8 +26,8 @@ public interface ParallelOperations<T> {
      *            Class 'Q'
      * @return Assortment&lt;Q&gt;
      */
-    public <K extends Comparable<K>, V> Assortment<Pair<K, V>> parallel(
-            POCallback<K, V> callback);
+    public <X extends Comparable<X>, Y, K extends Comparable<K>, V> Assortment<Pair<K, V>> parallel(
+            POCallback<X, Y, K, V> callback);
     /**
      * Reduce operation to agglomerate the final results form the intermediate
      * map and combine operations. The contract to reducer is slightly different

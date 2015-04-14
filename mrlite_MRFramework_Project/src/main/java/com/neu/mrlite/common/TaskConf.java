@@ -23,7 +23,7 @@ public class TaskConf implements Serializable {
     private String paritionerClass;
     private int numberOfReduceTasks = 1;
     private String mapperClass;
-    private String ioHandleServerUrl;
+    private String ioHandleServerIp;
 
     /* Reducer Task Properties */
     private String reducerClass;
@@ -84,12 +84,12 @@ public class TaskConf implements Serializable {
         this.mapperClass = mapperClass;
     }
 
-    public String getIoHandleServerUrl() {
-        return ioHandleServerUrl;
+    public String getIoHandleServerIp() {
+        return ioHandleServerIp;
     }
 
-    public void setIoHandleServerUrl(String ioHandleServerUrl) {
-        this.ioHandleServerUrl = ioHandleServerUrl;
+    public void setIoHandleServerIp(String ioHandleServerIp) {
+        this.ioHandleServerIp = ioHandleServerIp;
     }
 
     public String getReducerClass() {
@@ -169,8 +169,8 @@ public class TaskConf implements Serializable {
         /* Mapper Properties */
         taskConf.setMapperTask(true);
         taskConf.setMapperClass(jobConf.getMapperClass());
-        taskConf.setIoHandleServerUrl(node.getClientSocket().getLocalAddress()
-                .toString());
+        taskConf.setIoHandleServerIp(node.getClientSocket().getLocalAddress()
+                .getHostAddress());
         taskConf.setNumberOfReduceTasks(totalReduceNodes);
         return taskConf;
     }

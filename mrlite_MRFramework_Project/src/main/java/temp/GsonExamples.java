@@ -8,7 +8,6 @@ import org.apache.commons.collections4.CollectionUtils;
 
 import com.google.gson.Gson;
 import com.neu.mrlite.common.datastructures.Pair;
-import com.neu.mrlite.common.datastructures.Writable;
 
 public class GsonExamples {
 

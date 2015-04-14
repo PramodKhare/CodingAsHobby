@@ -14,4 +14,8 @@ public class NodeIdGenerator {
     public static synchronized int generateNodeId() {
         return nodeId++;
     }
+
+    public static synchronized int currentNodeId() {
+        return nodeId;
+    }
 }

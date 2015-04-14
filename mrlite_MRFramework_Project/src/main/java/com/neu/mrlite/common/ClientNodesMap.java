@@ -1,9 +1,7 @@
-package com.neu.mrlite.master;
+package com.neu.mrlite.common;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import com.neu.mrlite.common.ClientNode;
 
 public class ClientNodesMap {
     public final Map<Integer, ClientNode> nodes;

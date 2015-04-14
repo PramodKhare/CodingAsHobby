@@ -14,8 +14,14 @@ import java.net.Socket;
  */
 public class ClientNode {
     private final Socket clientSocket;
+
+    /* Node id for this Client */
     private int nodeId;
+
+    /* Remote Clients IP Address */
     private InetAddress clientIp;
+
+    /* Output and Input Streams to this remote client */
     private PrintWriter outputToClient;
     private BufferedReader inputFromClient;
 
@@ -24,8 +30,9 @@ public class ClientNode {
         this.clientSocket = clientSocket;
         this.nodeId = nodeId;
         this.clientIp = clientSocket.getInetAddress();
-        outputToClient = new PrintWriter(clientSocket.getOutputStream(), true);
-        inputFromClient = new BufferedReader(new InputStreamReader(
+        this.outputToClient = new PrintWriter(clientSocket.getOutputStream(),
+                true);
+        this.inputFromClient = new BufferedReader(new InputStreamReader(
                 clientSocket.getInputStream()));
     }
 
