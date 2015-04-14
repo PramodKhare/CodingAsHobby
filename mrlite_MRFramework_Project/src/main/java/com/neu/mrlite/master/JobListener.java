@@ -38,13 +38,7 @@ public class JobListener implements Runnable {
                     try {
                         // this is serialized JobConf object, deserialize it
                         JobConf job = JobConf.deserializeFromJson(line);
-                        if (job.isValidJobConfiguration()) {
-                            JobQueue.get().queueJob(job);
-                            out.println("job is put onto Job Queue : "
-                                    + job.getExecutableJar());
-                        } else {
-                            out.println("Invalid Job configuration");
-                        }
+                        
                     } catch (final IllegalStateException e) {
                         e.printStackTrace();
                         out.println("JobQueue is full, can't schedule the job now, try again");

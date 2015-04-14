@@ -10,7 +10,7 @@ import com.neu.mrlite.common.datastructures.POCallback;
 import com.neu.mrlite.common.datastructures.Pair;
 
 public class TestInterface {
-    public static Assortment run(String inFile, String outDir) throws FileNotFoundException, UnsupportedEncodingException, UnknownHostException {
+    public Assortment run(String inFile, String outDir) throws FileNotFoundException, UnsupportedEncodingException, UnknownHostException {
 		
 		IOHandle io = new IOHandle(inFile, outDir);
 		

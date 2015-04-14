@@ -6,6 +6,8 @@ import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import com.neu.mrlite.common.datastructures.Mapper;
+import com.neu.mrlite.common.datastructures.Reducer;
 import com.neu.mrlite.common.exception.InvalidJobConfException;
 import com.neu.mrlite.master.JobServlet;
 
@@ -142,16 +144,16 @@ public class JobConf implements Serializable {
         return mapperClass;
     }
 
-    public void setMapperClass(final String mapperClass) {
-        this.mapperClass = mapperClass;
+    public void setMapperClass(final Class<? extends Mapper> mapperClass) {
+        this.mapperClass = mapperClass.getName();
     }
 
     public String getReducerClass() {
         return reducerClass;
     }
 
-    public void setReducerClass(final String reducerClass) {
-        this.reducerClass = reducerClass;
+    public void setReducerClass(final Class<? extends Mapper> reducerClass) {
+        this.reducerClass = reducerClass.getName();
     }
 
     public boolean isCompleted() {
@@ -261,5 +263,17 @@ public class JobConf implements Serializable {
             throws JsonSyntaxException {
         final Gson gson = new Gson();
         return gson.fromJson(jsonStr, JobConf.class);
+    }
+
+    /**
+     * Adds the itself (JobConf) into JobQueue list
+     * @return
+     * @throws InvalidJobConfException
+     */
+    public boolean scheduleJob() throws InvalidJobConfException {
+        if (this.isValidJobConfiguration()) {
+            JobQueue.get().queueJob(this);
+        }
+        return true;
     }
 }
