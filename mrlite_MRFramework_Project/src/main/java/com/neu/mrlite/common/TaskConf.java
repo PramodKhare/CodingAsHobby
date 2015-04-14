@@ -10,7 +10,9 @@ import com.neu.mrlite.master.JobServlet;
 
 public class TaskConf implements Serializable {
     private static final long serialVersionUID = 4610481245402892811L;
-    private static int taskCounter = 0;
+
+    private static int mapTaskCounter = 0;
+    private static int reduceTaskCounter = 0;
 
     /* Common Task Properties */
     private String taskId;
@@ -144,6 +146,22 @@ public class TaskConf implements Serializable {
         this.numberOfReduceTasks = numberOfReduceTasks;
     }
 
+    public static int getMapTaskCounter() {
+        return mapTaskCounter;
+    }
+
+    public static void setMapTaskCounter(int mapTaskCounter) {
+        TaskConf.mapTaskCounter = mapTaskCounter;
+    }
+
+    public static int getReduceTaskCounter() {
+        return reduceTaskCounter;
+    }
+
+    public static void setReduceTaskCounter(int reduceTaskCounter) {
+        TaskConf.reduceTaskCounter = reduceTaskCounter;
+    }
+
     public String serializeToJson() {
         final Gson gson = new Gson();
         return gson.toJson(this);
@@ -164,7 +182,7 @@ public class TaskConf implements Serializable {
         taskConf.setExecutableJar(jobConf.getExecutableJar());
         taskConf.setInputFilePath(jobConf.getInputFilePath());
         taskConf.setLibJars(jobConf.getLibJars());
-        taskConf.setTaskId(jobConf.getJobId() + "_task_map" + taskCounter++);
+        taskConf.setTaskId(jobConf.getJobId() + "_task_map_" + mapTaskCounter++);
 
         /* Mapper Properties */
         taskConf.setMapperTask(true);
@@ -176,37 +194,40 @@ public class TaskConf implements Serializable {
     }
 
     public static synchronized TaskConf createReducerTaskConf(
-            final List<JobServlet> nodeJobServlets, final JobConf jobConf,
-            final int partitionToStreamFrom) {
+            final ClientNode node, final List<JobServlet> mapNodeJobServlets,
+            final JobConf jobConf, final int mapPartitionToCopy) {
         TaskConf taskConf = new TaskConf();
+
         /* Common Task Properties */
         taskConf.setExecutableJar(jobConf.getExecutableJar());
         taskConf.setInputFilePath(jobConf.getInputFilePath());
         taskConf.setLibJars(jobConf.getLibJars());
-        taskConf.setTaskId(jobConf.getJobId() + "_task_reduce" + taskCounter++);
+        taskConf.setTaskId(jobConf.getJobId() + "_task_reduce_"
+                + reduceTaskCounter++);
 
         /* Reducer Properties */
         taskConf.setMapperTask(false);
         taskConf.setReducerClass(jobConf.getReducerClass());
-        // taskConf.setIoHandleServerUrl(node.getClientSocket().getLocalAddress().toString());
+        taskConf.setIoHandleServerIp(node.getClientSocket().getLocalAddress()
+                .getHostAddress());
         taskConf.setOutDirPath(jobConf.getOutDirPath());
 
         /* Create MapperNodeInfo for each mapper jobservlet */
-        taskConf.setMapperNodeInfo(createMapperNodesInfoList(nodeJobServlets));
-        // This Reducer Node will stream the Mapper outputs from each map node -
-        // only the given partition
-        taskConf.setPartitionToStreamForReducer(partitionToStreamFrom);
+        taskConf.setMapperNodeInfo(createMapperNodesInfoList(mapNodeJobServlets));
+
+        // This Reducer Node will stream the Mapper outputs from each map node - only the given partition
+        taskConf.setPartitionToStreamForReducer(mapPartitionToCopy);
         return taskConf;
     }
 
     private static List<MapperNodeInfo> createMapperNodesInfoList(
-            final List<JobServlet> nodeJobServlets) {
-        if (nodeJobServlets == null || nodeJobServlets.isEmpty()) {
+            final List<JobServlet> mapNodeJobServlets) {
+        if (mapNodeJobServlets == null || mapNodeJobServlets.isEmpty()) {
             return null;
         }
         final List<MapperNodeInfo> mapInfoList = new ArrayList<MapperNodeInfo>();
 
-        for (JobServlet mapTask : nodeJobServlets) {
+        for (JobServlet mapTask : mapNodeJobServlets) {
             MapperNodeInfo mapNodeInfo = new MapperNodeInfo();
 
             // Task Id for map-task is required for getting value from In-Memory-Store

@@ -39,6 +39,9 @@ public class ShuffleMapPartition extends Thread {
                     this.mapSocket.getInputStream()));
             receiveMapPartition();
         } catch (final Exception e) {
+            System.out.println("Unable to copy partition from MapOutputServer "
+                    + this.mapNode.getShuffleSocketIp() + ":"
+                    + this.mapNode.getShuffleSocketPort());
             e.printStackTrace();
         } finally {
             System.out.println("Shutting down map-shuffle socket: "

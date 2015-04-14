@@ -53,7 +53,6 @@ public class JobScheduler implements Runnable {
                  *********************************************************/
 
                 List<JobServlet> mapNodesTasksList = scheduleMapTasksToSlaveNodes();
-                runningJob.setMapperTasks(mapNodesTasksList);
 
                 // At this point all Map Tasks have been finished, lets check if
                 // there is any reduce task to execute
@@ -61,12 +60,13 @@ public class JobScheduler implements Runnable {
                 /*********************************************************
                  * Execute Reducer Task
                  *********************************************************/
-                List<JobServlet> reduceNodesTasksList = null;
                 if (runningJob.getReducerClass() != null
                         && !runningJob.getReducerClass().trim().equals("")) {
-                    reduceNodesTasksList = scheduleReduceTasksToSlaveNodes(mapNodesTasksList);
+                    scheduleReduceTasksToSlaveNodes(mapNodesTasksList);
                 }
-                runningJob.setReducerTasks(reduceNodesTasksList);
+                // Reset the Map and Reduce Task counters
+                TaskConf.setMapTaskCounter(0);
+                TaskConf.setReduceTaskCounter(0);
 
                 System.out.println("Job Id: " + runningJob.getJobId()
                         + " is finished");
@@ -95,15 +95,16 @@ public class JobScheduler implements Runnable {
         synchronized (slaveNodes) {
             // TODO - Make ClientNodesMap iterable, rather than looping over it
             int maxNumberOfNodes = NodeIdGenerator.currentNodeId();
-            for (int i = 0, j = 0; (i < maxNumberOfNodes)
-                    && (j < totalReduceNodes); i++) {
+            for (int i = 0, mapPartitionToCopy = 0; (i < maxNumberOfNodes)
+                    && (mapPartitionToCopy < totalReduceNodes); i++) {
                 ClientNode node = slaveNodes.getClientNode(i);
                 if (node == null) {
                     continue;
                 } else {
                     // create a JobServlet thread for this reduce job task on this slave node
-                    TaskConf reduceTask = TaskConf.createReducerTaskConf(
-                            mapNodesTasksList, runningJob, j++);
+                    TaskConf reduceTask = TaskConf
+                            .createReducerTaskConf(node, mapNodesTasksList,
+                                    runningJob, mapPartitionToCopy++);
                     // Add this thread to waitlist - list of threads to wait on - till they complete
                     reduceNodesTasksList.add(new JobServlet(node, reduceTask));
                 }
@@ -122,6 +123,7 @@ public class JobScheduler implements Runnable {
                 e.printStackTrace();
             }
         }
+        // Set the task list for history-book-keeping purposes
         runningJob.setReducerTasks(reduceNodesTasksList);
         return reduceNodesTasksList;
     }
@@ -174,6 +176,8 @@ public class JobScheduler implements Runnable {
                 e.printStackTrace();
             }
         }
+        // Set the task list for history-book-keeping purposes
+        runningJob.setReducerTasks(mapNodesTasksList);
         return mapNodesTasksList;
     }
 

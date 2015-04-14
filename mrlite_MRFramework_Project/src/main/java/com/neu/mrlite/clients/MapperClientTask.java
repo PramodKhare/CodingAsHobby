@@ -43,9 +43,9 @@ public class MapperClientTask extends Thread {
             // STEP 2: Actually execute the POCallback chain from the returned Assortment
             execute(collection.getExecChain(), collection.getIOHandle());
 
-            // Partition the outVal i.e. List<Writable> into keyspace and save it into in-memory-map
+            // STEP 3: Partition the outVal i.e. List<Writable> into keyspace and save it into in-memory-map
             partitionMapOut();
-
+            System.out.println("MapperClientTask: Mapper Task is complete");
         } catch (final Exception e) {
             e.printStackTrace();
             out.println("Invalid Task configuration provided");
@@ -116,7 +116,9 @@ public class MapperClientTask extends Thread {
             }
         }
         // TODO Currently sending output back to Master - change it to ioserver
-        // out.println(gson.toJson(outVal));
+        // TODO Don't send full data - in one line - buffer overflow will happen
+        out.println(gson.toJson(outVal));
+        out.println("Task_Finished");
     }
 
     @SuppressWarnings("unchecked")
@@ -131,9 +133,10 @@ public class MapperClientTask extends Thread {
 
         // Do the actual partioning AND save individual partition with keys - as taskID_<partition_no> in InMemoryStore
         for (Pair pair : outVal) {
+            // Default Hash-partitioner
             int partitionNumber = partitioner.getPartition(pair.getKey(),
                     pair.getValue(), task.getNumberOfReduceTasks());
-            // partitioner
+            // get the Partition key - InMemoryStore
             String key = task.getTaskId() + "_" + partitionNumber;
             List<Pair> partionPairList = (List<Pair>) InMemStore
                     .getValueForKey(key);

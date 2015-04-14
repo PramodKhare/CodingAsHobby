@@ -33,17 +33,17 @@ public class ReducerClientTask extends Thread {
     @Override
     public void run() {
         try {
-            // STEP 1: First Complete the Shuffle, and Sort and Grouping by Keys phase
+            // STEP 1: First Complete the "Shuffle Sort" and "Grouping by Keys" phase
             ShuffleSortAndGroup sf = new ShuffleSortAndGroup(this.task);
             this.collection = sf.shuffle();
             this.groupedByKeyResults = sf.getMapResults();
 
-            // Collect user-defined Reducer function into POCallback chain
+            // STEP 2: Collect user-defined Reducer function into POCallback chain
             this.collection = executeUserReduceFunction(this.collection);
 
-            // STEP 2: Actually execute the POCallback chain from the returned Assortment
+            // STEP 3: Actually execute the POCallback chain from the returned Assortment
             execute(this.collection.getExecChain());
-
+            System.out.println("ReducerClientTask: Reducer Task is complete");
         } catch (final Exception e) {
             e.printStackTrace();
             out.println("Invalid Task configuration provided");
@@ -86,7 +86,6 @@ public class ReducerClientTask extends Thread {
         Object outKey;
         Gson gson = new Gson();
         for (POCallback p : exec) {
-            System.out.println(p);
             List<Pair> interVal = new ArrayList<Pair>();
             for (Pair val : groupedByKeyResults) {
                 p.process(val);
@@ -96,5 +95,6 @@ public class ReducerClientTask extends Thread {
         }
         // TODO Currently sending output back to Master - change it to ioserver
         out.println(gson.toJson(groupedByKeyResults));
+        out.println("Task_Finished");
     }
 }

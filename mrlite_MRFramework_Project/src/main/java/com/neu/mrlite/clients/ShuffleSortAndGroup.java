@@ -59,8 +59,10 @@ public class ShuffleSortAndGroup {
 
             // Once copying phase is complete, collate i.e. merge the sorted partitions
             for (ShuffleMapPartition smp : partitionList) {
-                this.mapResults = CollectionUtils.collate(this.mapResults,
-                        smp.getPartition());
+                if (smp.getPartition() != null && !smp.getPartition().isEmpty()) {
+                    this.mapResults = CollectionUtils.collate(this.mapResults,
+                            smp.getPartition());
+                }
             }
 
             // Group by key and modify create new map-results list<Pair>
@@ -83,7 +85,6 @@ public class ShuffleSortAndGroup {
         List<Pair> groupedByKeyResults = new ArrayList<Pair>();
         Pair pair = null;
         for (Pair p : mapResults) {
-            System.out.println(p.toString());
             if (pair == null) {
                 pair = p;
                 List valueList = new ArrayList();
@@ -92,6 +93,7 @@ public class ShuffleSortAndGroup {
                 continue;
             }
 
+            System.out.println(p.toString());
             // If keys are same then add value into value list
             if (pair.getKey().equals(p.getKey())) {
                 List valueList = (List) pair.getValue();

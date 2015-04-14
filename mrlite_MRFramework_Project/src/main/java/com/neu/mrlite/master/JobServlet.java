@@ -33,7 +33,7 @@ public class JobServlet extends Thread {
             out.println(taskConf.serializeToJson());
             String inputLine;
             System.out.println("Waiting for client response...");
-            while ((inputLine = in.readLine()) != null) {
+            while ((inputLine = in.readLine().trim()) != null) {
                 System.out.println(inputLine);
                 if (inputLine.equals(TERMINATE)) {
                     break;
