@@ -25,6 +25,7 @@ ZSH_THEME="babun"
 
 # Uncomment the following line to disable auto-setting terminal title.
 # DISABLE_AUTO_TITLE="true"
+export AUTO_TITLE_SCREENS="YES"
 
 # Uncomment the following line to enable command auto-correction.
 ENABLE_CORRECTION="true"
@@ -49,18 +50,19 @@ COMPLETION_WAITING_DOTS="true"
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git commin-aliases sudo colorize colored-man-pages)
+plugins=(git commin-aliases sudo colorize colored-man-pages zsh-navigation-tools openssh krb5-workstation)
 
 # User configuration
 
 export PATH=$HOME/bin:/usr/local/bin:$PATH
 export PATH="$PATH:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin"
+export PATH="$PATH:/cygdrive/c/midway"
 # export MANPATH="/usr/local/man:$MANPATH"
 
 source $ZSH/oh-my-zsh.sh
 
 # You may need to manually set your language environment
-# export LANG=en_US.UTF-8
+export LANG=en_US.UTF-8
 
 # Preferred editor for local and remote sessions
 # if [[ -n $SSH_CONNECTION ]]; then
@@ -75,6 +77,8 @@ source $ZSH/oh-my-zsh.sh
 # ssh
 # export SSH_KEY_PATH="~/.ssh/dsa_id"
 
+export KRB5_CONFIG=/etc/krb5.conf
+export KRB5CCNAME=FILE:/var/tmp/krb5_cc_cache
 # Set personal aliases, overriding those provided by oh-my-zsh libs,
 # plugins, and themes. Aliases can be placed here, though oh-my-zsh
 # users are encouraged to define aliases within the ZSH_CUSTOM folder.
@@ -96,14 +100,14 @@ export SSH_KEY_PATH="~/.ssh/id_rsa"
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-PS1='[%n@%M]%/:'
-PROMPT=$PS1
+export RHEL='prakhare.desktop.amazon.com'
+export CLOUDRHEL='dev-dsk-prakhare-2b-i-19ec04b6.us-west-2.amazon.com'
 
-export EDITOR=/usr/bin/vim
-
-export PROMPT="
-%{$fg[white]%}(%D %*) <%?> [%~] $program %{$fg[default]%}
-%{$fg[cyan]%}%m %#%{$fg[default]%} "
+export CVSEDITOR="vim"
+export SVN_EDITOR="vim"
+export EDITOR="vim"
+export VISUAL="vim"
+export BREW_EDITOR="vim"
 
 rhelexec () {
 	ssh "$RHEL" "$@"
@@ -131,23 +135,56 @@ export HISTCONTROL=ignoredups:erasedups  # no duplicate entries
 ##autoload -U compinit
 ##compinit
 
-autoload -Uz promptinit
-promptinit
+autoload -U compinit
+compinit -u
+_comp_options+=(NO_err_return)
+
 
 autoload -U colors
 colors
 
-##allow tab completion in the middle of a word
+#allow tab completion in the middle of a word
 setopt COMPLETE_IN_WORD
+
+bindkey "^R" history-incremental-search-backward
+bindkey "^E" end-of-line
+bindkey "^A" beginning-of-line
 
 ## configure fuzzy autocomplete on tab
 zstyle  -e ':completion:*:(ssh|scp|sftp|rsh|rsync):hosts' hosts 'reply=(${=${${(f)"$(cat {/etc/ssh_,~/.ssh/known_}hosts(|2)(N) /dev/null)"}%%[# ]*}//,/ })' \
-':completion:*' matcher-list '' \
-'m:{a-z\-}={A-Z\_}' \
-'r:[^[:alpha:]]||[[:alpha:]]=** r:|=* m:{a-z\-}={A-Z\_}' \
-'r:[[:ascii:]]||[[:ascii:]]=** r:|=* m:{a-z\-}={A-Z\_}'
+	':completion:*' matcher-list '' \
+	'm:{a-z\-}={A-Z\_}' \
+	'r:[^[:alpha:]]||[[:alpha:]]=** r:|=* m:{a-z\-}={A-Z\_}' \
+	'r:[[:ascii:]]||[[:ascii:]]=** r:|=* m:{a-z\-}={A-Z\_}'
 
-## Alias
+HISTSIZE=100000
+HISTFILE=$HOME/.zsh_history
+HISTFILESIZE=100000
+
+## history
+setopt APPEND_HISTORY
+## for sharing history between zsh processes
+setopt INC_APPEND_HISTORY
+setopt SHARE_HISTORY
+export HISTCONTROL=ignoredups:erasedups  # no duplicate entries
+export HISTSIZE=100000                   # big big history
+export HISTFILESIZE=100000               # big big history
+export SAVEHIST=10000
+export HISTFILE=~/.zsh_history
+export PROMPT="
+%{$fg[white]%}(%D %*) <%?> [%~] $program %{$fg[default]%}
+%{$fg[cyan]%}%m %#%{$fg[default]%} "
+
+set-title() {
+    echo -e "\e]0;$*\007"
+}
+
+ssh() {
+    set-title $*;
+    /usr/bin/ssh -2 $*;
+    set-title $HOST;
+}
+
 # ls, the common ones I use a lot shortened for rapid fire usage
 alias l='ls -lFh'     #size,show type,human readable
 alias la='ls -lAFh'   #long list,show almost all,show type,human readable
@@ -196,8 +233,14 @@ alias rm='rm -i'
 alias cp='cp -i'
 alias mv='mv -i'
 
+alias dir=ll
+alias cls=clear
+
+## Alias
 alias e=emacs
 alias lta='less `ls -trh| tail | grep appli`'
+alias ls="ls -F --color=auto"
+alias ll='ls -lF'
 alias kerb='kdestroy && kinit -f'
 alias tar1='tar czf'
 alias tar2='tar -zxvf'
@@ -210,6 +253,8 @@ alias sshenvdevo="sshenv --ssh 'ssh -F /dev/null'"
 
 # Make your dev directories available for tab complete, no matter where you are.
 export CDPATH=~/pramod/
+
+source ~/.oh-my-zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh 
 
 PS1='[%n@%M]%/:'
 PROMPT=$PS1
