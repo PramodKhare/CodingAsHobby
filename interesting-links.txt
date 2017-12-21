@@ -3,3 +3,6 @@ Interesting Links -
 * Create .gitignore file with contents from -> https://www.gitignore.io/api/osx,intellij,eclipse,windows
 * Regex Validator online - https://regex101.com/
 * IDE online - https://ideone.com
+* ZSH Plugins - https://github.com/robbyrussell/oh-my-zsh/tree/master/plugins
+* Cygwin Shell - https://mirrors.kernel.org/sourceware/cygwin//x86/release/
+* Service of the Linux Kernel Archives - https://mirrors.kernel.org/
